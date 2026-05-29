@@ -33,3 +33,33 @@ logs/
 # Misc
 *.tmp
 *.bak
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+**/doctor_summary.txt
+*.iml
+.idea/
+
+# Flutter build outputs
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/key.properties
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Pods/
+**/ios/.symlinks/
+
+# Dev tools
+dev/node_modules/
+dev/shots/
+
+# Firebase secrets (added in Phase 4)
+**/google-services.json
+**/GoogleService-Info.plist
+lib/firebase_options.dart

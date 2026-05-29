@@ -1,0 +1,9 @@
+{
+  "name": "todoapp-dev-tools",
+  "private": true,
+  "type": "module",
+  "description": "開発用ツール（Webビルドのスクリーンショット撮影など）",
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}
