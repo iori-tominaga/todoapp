@@ -13,7 +13,7 @@ class TodoApp extends StatelessWidget {
       title: 'グループTodo',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(kDefaultTokens, Brightness.light),
-      darkTheme: buildAppTheme(kDefaultTokens, Brightness.dark),
+      themeMode: ThemeMode.light,
       routerConfig: appRouter,
     );
   }

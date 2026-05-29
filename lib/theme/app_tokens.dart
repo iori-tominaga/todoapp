@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 class AppTokens extends ThemeExtension<AppTokens> {
   const AppTokens({
     required this.seed,
+    required this.scaffoldBackground,
+    required this.surfaceCard,
     required this.priorityHigh,
     required this.priorityMid,
     required this.priorityLow,
@@ -27,6 +29,12 @@ class AppTokens extends ThemeExtension<AppTokens> {
 
   /// ColorScheme を生成するためのシード色。
   final Color seed;
+
+  /// アプリ全体の背景色（羊皮紙風の温かい地色）。
+  final Color scaffoldBackground;
+
+  /// カード等のサーフェス色（背景よりわずかに明るい紙色）。
+  final Color surfaceCard;
 
   // 優先度カラー（仕様: 高=赤 / 中=黄 / 低=グレー）
   final Color priorityHigh;
@@ -53,6 +61,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
   @override
   AppTokens copyWith({
     Color? seed,
+    Color? scaffoldBackground,
+    Color? surfaceCard,
     Color? priorityHigh,
     Color? priorityMid,
     Color? priorityLow,
@@ -70,6 +80,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
   }) {
     return AppTokens(
       seed: seed ?? this.seed,
+      scaffoldBackground: scaffoldBackground ?? this.scaffoldBackground,
+      surfaceCard: surfaceCard ?? this.surfaceCard,
       priorityHigh: priorityHigh ?? this.priorityHigh,
       priorityMid: priorityMid ?? this.priorityMid,
       priorityLow: priorityLow ?? this.priorityLow,
@@ -92,6 +104,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     if (other is! AppTokens) return this;
     return AppTokens(
       seed: Color.lerp(seed, other.seed, t)!,
+      scaffoldBackground: Color.lerp(scaffoldBackground, other.scaffoldBackground, t)!,
+      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
       priorityHigh: Color.lerp(priorityHigh, other.priorityHigh, t)!,
       priorityMid: Color.lerp(priorityMid, other.priorityMid, t)!,
       priorityLow: Color.lerp(priorityLow, other.priorityLow, t)!,
@@ -112,16 +126,19 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
 }
 
-/// 現行（Material 3 デフォルト）のデザイントークン。
+/// 現行デザイントークン：「ファンタジーだが温かみのある」世界観。
+/// ブランド色は森のティールグリーン、地色は羊皮紙、アクセントは燠火・黄金・石のアース系。
 /// 将来デザインを一新する場合は、この定数を別インスタンスに差し替える。
 const AppTokens kDefaultTokens = AppTokens(
-  seed: Color(0xFF4C6EF5),
-  priorityHigh: Color(0xFFC8412E),
-  priorityMid: Color(0xFFD8A52A),
-  priorityLow: Color(0xFF9A988D),
-  statusNotStarted: Color(0xFF9A988D),
-  statusInProgress: Color(0xFF4C6EF5),
-  statusDone: Color(0xFF2E9E5B),
+  seed: Color(0xFF1F9E8C), // 森のティールグリーン（ブランド色）
+  scaffoldBackground: Color(0xFFF7F1E6), // 羊皮紙風の温かい地色
+  surfaceCard: Color(0xFFFDFAF3), // 紙色（地色よりわずかに明るい）
+  priorityHigh: Color(0xFFC15B3E), // 燠火レッド
+  priorityMid: Color(0xFFD79A3C), // 黄金
+  priorityLow: Color(0xFFA89F8C), // 石グレー
+  statusNotStarted: Color(0xFFB3A993), // 砂色
+  statusInProgress: Color(0xFFD98A3D), // 灯火アンバー
+  statusDone: Color(0xFF2E9E8A), // ティール（達成）
   spaceXs: 4,
   spaceSm: 8,
   spaceMd: 16,
