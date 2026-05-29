@@ -11,10 +11,12 @@ class TaskTile extends StatelessWidget {
     required this.task,
     required this.creatorName,
     required this.onStatusTap,
+    this.completerName,
   });
 
   final Task task;
   final String creatorName;
+  final String? completerName;
   final VoidCallback onStatusTap;
 
   @override
@@ -41,7 +43,7 @@ class TaskTile extends StatelessWidget {
                 Text(task.title, style: Theme.of(context).textTheme.titleMedium),
                 SizedBox(height: t.spaceXs),
                 Text(
-                  taskSubtitle(task, creatorName),
+                  taskSubtitle(task, creatorName, completerName: completerName),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

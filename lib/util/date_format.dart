@@ -10,13 +10,14 @@ String formatDueDate(DateTime d) {
 }
 
 /// タスク一覧の副題：「6/1(日) 18:00 ・ 田中が作成」。
-String taskSubtitle(Task task, String creatorName) {
+/// 完了タスクは「6/3(水) ・ 鈴木が完了」のように完了者を表示する。
+String taskSubtitle(Task task, String creatorName, {String? completerName}) {
   final buf = StringBuffer(formatDueDate(task.dueDate));
   if (task.hasTime && task.dueTime != null) {
     buf.write(' ${task.dueTime}');
   }
   if (task.status == TaskStatus.done) {
-    buf.write(' ・ 完了');
+    buf.write(completerName != null ? ' ・ $completerNameが完了' : ' ・ 完了');
   } else {
     buf.write(' ・ $creatorNameが作成');
   }

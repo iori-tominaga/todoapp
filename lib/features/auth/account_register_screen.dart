@@ -84,7 +84,7 @@ class _ProviderButton extends StatelessWidget {
         icon: Icon(icon),
         label: Text(label),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           alignment: Alignment.centerLeft,
         ),
       ),

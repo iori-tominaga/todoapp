@@ -121,6 +121,9 @@ class _TasksScreenState extends State<TasksScreen> {
                 return TaskTile(
                   task: task,
                   creatorName: MockData.memberName(_group.id, task.createdBy),
+                  completerName: task.completedBy == null
+                      ? null
+                      : MockData.memberName(_group.id, task.completedBy!),
                   onStatusTap: () => _changeStatus(task),
                 );
               },

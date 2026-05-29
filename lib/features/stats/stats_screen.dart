@@ -136,7 +136,7 @@ class _RankBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final color = entry.isMe ? t.priorityHigh : t.seed;
+    final color = entry.isMe ? t.priorityMid : t.seed;
     final ratio = invert
         ? (maxValue == 0 ? 0.0 : (maxValue - entry.value) / maxValue * 0.8 + 0.2)
         : (maxValue == 0 ? 0.0 : entry.value / maxValue);
@@ -190,6 +190,9 @@ class _RankBar extends StatelessWidget {
   }
 }
 
+/// 直近7日の曜日ラベル（基準日 2026-06-01 月曜 起点）。
+const _weekdayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+
 class _WeeklyChart extends StatelessWidget {
   const _WeeklyChart({required this.values});
   final List<int> values;
@@ -197,6 +200,7 @@ class _WeeklyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final labelStyle = Theme.of(context).textTheme.labelSmall;
     final spots = [
       for (var i = 0; i < values.length; i++)
         FlSpot(i.toDouble(), values[i].toDouble()),
@@ -207,13 +211,37 @@ class _WeeklyChart extends StatelessWidget {
         minY: 0,
         gridData: const FlGridData(show: true, drawVerticalLine: false),
         borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
           leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true, reservedSize: 28)),
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 2,
+              getTitlesWidget: (value, meta) =>
+                  Text(value.toInt().toString(), style: labelStyle),
+            ),
+          ),
           bottomTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true, reservedSize: 20)),
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 20,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final i = value.round();
+                if (i < 0 || i >= _weekdayLabels.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(_weekdayLabels[i], style: labelStyle),
+                );
+              },
+            ),
+          ),
         ),
         lineBarsData: [
           LineChartBarData(
