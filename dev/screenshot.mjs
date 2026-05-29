@@ -20,11 +20,19 @@ const BASE = process.argv[2] ?? 'http://localhost:8080';
 
 // 撮影対象の画面（go_router のパス）
 const SCREENS = [
-  { name: 'tasks', route: '/tasks' },
-  { name: 'mytasks', route: '/mytasks' },
-  { name: 'stats', route: '/stats' },
-  { name: 'character', route: '/character' },
-  { name: 'settings', route: '/settings' },
+  { name: '1-onboarding', route: '/onboarding' },
+  { name: '2-groups', route: '/groups' },
+  { name: '3-tasks', route: '/tasks' },
+  { name: '4-addtask', route: '/tasks/add' },
+  { name: '5-mytasks', route: '/mytasks' },
+  { name: '6-stats', route: '/stats' },
+  { name: '7-character', route: '/character' },
+  { name: '8-groupsettings', route: '/groups/settings' },
+  { name: '9-settings', route: '/settings' },
+  { name: '10-groupcreate', route: '/groups/create' },
+  { name: '11-profile', route: '/profile' },
+  { name: '12-account', route: '/account/register' },
+  { name: '13-legal', route: '/legal' },
 ];
 
 const VIEWPORT = { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
