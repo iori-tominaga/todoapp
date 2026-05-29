@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>グループTodo — ワイヤーフレーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#eceae1;
+    --ink:#1c1c1a;
+    --ink-soft:#6b6a62;
+    --line:#9a988d;
+    --line-soft:#c4c2b6;
+    --accent:#c8412e;        /* 赤ペン注釈・操作可能 */
+    --hi:#3760c4;            /* 補足 */
+    --hint-bg:#f7f6f0;
+    --p-high:#c8412e;
+    --p-mid:#d8a52a;
+    --p-low:#9a988d;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Archivo',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--line-soft) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+    background-size:26px 26px;
+    color:var(--ink);
+    min-height:100vh;
+    padding:40px 20px 80px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .masthead{text-align:center;margin-bottom:14px;}
+  .masthead h1{font-size:26px;font-weight:700;letter-spacing:-.5px;}
+  .masthead .sub{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:4px;letter-spacing:1px;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:10px;border:1px solid var(--line);
+    padding:2px 7px;border-radius:2px;color:var(--ink-soft);margin-top:8px;background:var(--hint-bg);}
+
+  .stage{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:980px;}
+
+  /* phone */
+  .phone{
+    width:340px;height:710px;flex:0 0 auto;
+    border:2.5px solid var(--ink);border-radius:34px;
+    background:var(--paper);position:relative;overflow:hidden;
+    box-shadow:7px 9px 0 rgba(28,28,26,.12);
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:120px;height:22px;background:var(--ink);border-radius:0 0 14px 14px;z-index:40;}
+  .screen-wrap{position:absolute;inset:0;}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;padding:34px 0 0;}
+  .screen.active{display:flex;}
+  .body{flex:1;overflow-y:auto;padding:14px 16px 14px;}
+  .body::-webkit-scrollbar{width:0;}
+
+  /* generic ui pieces (wireframe style) */
+  .appbar{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 16px 10px;border-bottom:1.5px solid var(--line);}
+  .appbar .title{font-weight:700;font-size:17px;display:flex;align-items:center;gap:6px;}
+  .appbar .ic{font-family:var(--mono);font-size:13px;border:1.4px solid var(--line);
+    border-radius:6px;width:30px;height:28px;display:flex;align-items:center;justify-content:center;}
+  .caret{font-size:11px;color:var(--ink-soft);}
+
+  .box{border:1.5px solid var(--line);border-radius:8px;background:var(--paper);}
+  .btn{border:1.6px solid var(--ink);border-radius:8px;background:var(--paper);
+    padding:11px;text-align:center;font-weight:600;font-size:14px;}
+  .btn.primary{background:var(--ink);color:var(--paper);}
+  .btn.ghost{border-style:dashed;font-weight:500;color:var(--ink-soft);}
+  .note{font-family:var(--mono);font-size:11px;color:var(--ink-soft);line-height:1.5;}
+  .center{display:flex;flex-direction:column;align-items:center;}
+
+  /* tappable affordance */
+  .tap{cursor:pointer;position:relative;}
+  .tap::after{content:"";position:absolute;inset:-3px;border:1.4px dashed transparent;border-radius:9px;}
+  .tap:hover::after{border-color:var(--accent);}
+  .tap:active{transform:translateY(1px);}
+
+  /* task row */
+  .task{display:flex;gap:10px;align-items:flex-start;padding:11px 4px;border-bottom:1px dashed var(--line-soft);}
+  .status-chip{font-family:var(--mono);font-size:11px;font-weight:600;border:1.5px solid var(--ink);
+    border-radius:6px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .status-chip.done{background:var(--ink);color:var(--paper);}
+  .task .t-main{flex:1;}
+  .task .t-title{font-size:14px;font-weight:600;}
+  .task .t-due{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:3px;}
+  .dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;margin-top:3px;border:1px solid rgba(0,0,0,.15);}
+  .dot.high{background:var(--p-high);} .dot.mid{background:var(--p-mid);} .dot.low{background:var(--p-low);}
+
+  .fab{position:absolute;right:16px;bottom:74px;background:var(--ink);color:var(--paper);
+    border-radius:12px;padding:11px 16px;font-weight:700;font-size:14px;z-index:25;box-shadow:2px 3px 0 rgba(0,0,0,.2);}
+  .adbar{margin:0 16px;border:1.5px dashed var(--line);border-radius:6px;
+    height:46px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;color:var(--ink-soft);}
+
+  /* bottom nav */
+  .nav{display:flex;border-top:1.5px solid var(--line);background:var(--paper);}
+  .nav .item{flex:1;text-align:center;padding:9px 0 12px;font-family:var(--mono);font-size:10px;
+    color:var(--ink-soft);cursor:pointer;border-top:2.5px solid transparent;margin-top:-1.5px;}
+  .nav .item .gl{font-size:16px;display:block;margin-bottom:3px;line-height:1;font-family:var(--sans);}
+  .nav .item.on{color:var(--ink);border-top-color:var(--accent);font-weight:600;}
+
+  /* form */
+  .field{margin-bottom:14px;}
+  .field label{font-family:var(--mono);font-size:11px;color:var(--ink-soft);display:block;margin-bottom:5px;}
+  .field .input{border:1.5px solid var(--line);border-radius:7px;height:40px;display:flex;align-items:center;
+    padding:0 11px;font-size:13px;color:var(--ink-soft);justify-content:space-between;}
+  .seg{display:flex;gap:8px;}
+  .seg .opt{flex:1;border:1.6px solid var(--line);border-radius:7px;padding:9px 0;text-align:center;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .seg .opt.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);}
+  .req{color:var(--accent);}
+  .lock{font-family:var(--mono);font-size:10px;color:var(--ink-soft);}
+
+  /* stats */
+  .stat-row{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px dashed var(--line-soft);font-size:13px;}
+  .stat-row b{font-family:var(--mono);}
+  .rank{display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:12px;}
+  .rank .bar{height:13px;background:var(--ink);border-radius:2px;}
+  .rank .me .bar{background:var(--accent);}
+  .chartbox{border:1.5px dashed var(--line);border-radius:7px;height:90px;margin-top:10px;
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--ink-soft);}
+
+  /* character */
+  .char-art{border:1.5px dashed var(--line);border-radius:12px;height:150px;margin:6px 0 12px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+  .char-face{font-size:46px;}
+  .meter{height:13px;border:1.5px solid var(--ink);border-radius:7px;overflow:hidden;background:var(--paper);}
+  .meter > span{display:block;height:100%;background:var(--ink);}
+  .kv{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin:4px 0;}
+
+  /* member list */
+  .mem{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px dashed var(--line-soft);font-size:13px;}
+  .av{width:26px;height:26px;border-radius:50%;border:1.4px solid var(--line);font-family:var(--mono);font-size:10px;
+    display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .toggle{margin-left:auto;font-family:var(--mono);font-size:10px;border:1.4px solid var(--line);border-radius:20px;padding:3px 9px;}
+  .toggle.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .premium{border:1.6px solid var(--ink);border-radius:9px;padding:12px;text-align:center;}
+  .premium .price{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin:3px 0 9px;}
+
+  /* dialog + ad overlay */
+  .overlay{position:absolute;inset:0;background:rgba(20,20,18,.55);z-index:60;
+    display:none;align-items:center;justify-content:center;padding:22px;}
+  .overlay.show{display:flex;}
+  .dialog{background:var(--paper);border:2px solid var(--ink);border-radius:14px;width:100%;padding:18px;}
+  .dialog h3{font-size:15px;margin-bottom:3px;}
+  .dialog .sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:12px;}
+  .radio{display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px dashed var(--line-soft);font-size:14px;}
+  .radio .ring{width:17px;height:17px;border-radius:50%;border:1.6px solid var(--ink);flex:0 0 auto;position:relative;}
+  .radio.sel .ring::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--ink);}
+  .warn{font-family:var(--mono);font-size:10.5px;color:var(--accent);border:1px dashed var(--accent);
+    border-radius:6px;padding:7px 9px;margin:12px 0;line-height:1.5;}
+  .dlg-actions{display:flex;gap:10px;}
+  .dlg-actions .btn{flex:1;}
+
+  .ad{background:var(--ink);color:var(--paper);border-radius:14px;width:100%;height:340px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;position:relative;}
+  .ad .lbl{font-family:var(--mono);font-size:11px;opacity:.7;letter-spacing:2px;}
+  .ad .big{font-size:18px;font-weight:700;}
+  .ad .skip{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:11px;
+    border:1.4px solid rgba(255,255,255,.5);border-radius:20px;padding:5px 11px;}
+
+  /* legend */
+  .legend{flex:0 0 240px;max-width:240px;}
+  .legend h2{font-family:var(--mono);font-size:12px;letter-spacing:1px;color:var(--ink-soft);
+    border-bottom:1.5px solid var(--line);padding-bottom:6px;margin-bottom:12px;}
+  .legend .li{font-size:12.5px;line-height:1.5;margin-bottom:11px;display:flex;gap:8px;}
+  .legend .li .n{font-family:var(--mono);font-weight:600;color:var(--accent);flex:0 0 auto;}
+  .legend .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:3px;}
+  .legend .key{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:6px;line-height:1.9;}
+  .legend .key b{color:var(--ink);}
+  .hintline{font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:14px;line-height:1.6;
+    border-top:1px dashed var(--line);padding-top:10px;}
+
+  @media(max-width:760px){ .legend{flex-basis:340px;} }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>グループ Todo</h1>
+  <div class="sub">WIREFRAME / v1 — ブループリント</div>
+  <div class="tag">タップで画面遷移できます（赤い破線＝操作可能）</div>
+</div>
+
+<div class="stage">
+  <!-- ============ PHONE ============ -->
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen-wrap">
+
+      <!-- ① AUTH -->
+      <section class="screen" id="s-auth">
+        <div class="body center" style="justify-content:center;gap:0;padding-top:60px;">
+          <div class="box" style="width:78px;height:78px;display:flex;align-items:center;justify-content:center;border-radius:18px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);">LOGO</div>
+          <h2 style="margin-top:22px;font-size:21px;">グループTodo</h2>
+          <p class="note" style="margin:8px 0 34px;text-align:center;">みんなでタスクを共有・消化</p>
+          <div class="btn primary tap" style="width:100%;" onclick="go('tasks')">はじめる（匿名）</div>
+          <div class="btn tap" style="width:100%;margin-top:12px;" onclick="go('settings')">アカウント登録</div>
+          <p class="note" style="margin-top:34px;text-align:center;">招待リンク経由で開くと<br>自動で該当グループへ参加</p>
+        </div>
+      </section>
+
+      <!-- ② GROUPS -->
+      <section class="screen" id="s-groups">
+        <div class="appbar"><div class="title">マイグループ</div></div>
+        <div class="body">
+          <div class="box tap" style="padding:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" onclick="go('tasks')">
+            <span style="font-weight:600;">家族</span>
+            <span class="note">👤4 &nbsp;★プレミアム</span>
+          </div>
+          <div class="box tap" style="padding:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" onclick="go('tasks')">
+            <span style="font-weight:600;">開発チーム</span>
+            <span class="note">👤6</span>
+          </div>
+          <div class="box tap" style="padding:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" onclick="go('tasks')">
+            <span style="font-weight:600;">サークル</span>
+            <span class="note">👤3</span>
+          </div>
+          <div class="btn ghost tap" style="margin-top:6px;">＋ 新規グループ作成</div>
+          <p class="note" style="margin-top:12px;text-align:center;">無料は 3グループ / 6人まで</p>
+        </div>
+      </section>
+
+      <!-- ③ TASKS (tab) -->
+      <section class="screen active" id="s-tasks">
+        <div class="appbar">
+          <div class="title tap" onclick="go('groups')">家族 <span class="caret">▼</span></div>
+          <div style="display:flex;gap:8px;">
+            <div class="ic tap" onclick="go('groupset')">⚙</div>
+            <div class="ic tap" onclick="go('add')">＋</div>
+          </div>
+        </div>
+        <div class="body" style="padding-bottom:120px;">
+          <div class="task">
+            <div class="status-chip tap" onclick="openDlg('牛乳を買う','未')">未</div>
+            <div class="t-main"><div class="t-title">牛乳を買う</div><div class="t-due">6/1(日) 18:00 ・ 田中が作成</div></div>
+            <div class="dot high"></div>
+          </div>
+          <div class="task">
+            <div class="status-chip tap" onclick="openDlg('書類を提出','進')">進</div>
+            <div class="t-main"><div class="t-title">書類を提出</div><div class="t-due">6/1(日) ・ 自分が作成</div></div>
+            <div class="dot mid"></div>
+          </div>
+          <div class="task">
+            <div class="status-chip tap" onclick="openDlg('部屋の掃除','未')">未</div>
+            <div class="t-main"><div class="t-title">部屋の掃除</div><div class="t-due">6/3(火)</div></div>
+            <div class="dot low"></div>
+          </div>
+          <div class="task">
+            <div class="status-chip done tap" onclick="openDlg('ゴミ出し','完')">完</div>
+            <div class="t-main"><div class="t-title">ゴミ出し</div><div class="t-due">6/3(火) ・ 完了 by 佐藤</div></div>
+            <div class="dot mid"></div>
+          </div>
+          <p class="note" style="margin-top:14px;">並び順: 日付 → 時間あり優先 → 時間 → 優先度 → 作成順</p>
+        </div>
+        <div class="fab tap" onclick="go('add')">＋ 追加</div>
+        <div class="adbar" style="margin-bottom:8px;">広告バナー（無料時のみ）</div>
+        <nav class="nav" data-nav></nav>
+      </section>
+
+      <!-- ④ ADD TASK -->
+      <section class="screen" id="s-add">
+        <div class="appbar"><div class="title"><span class="ic tap" onclick="go('tasks')" style="font-size:16px;">←</span> タスクを追加</div></div>
+        <div class="body">
+          <div class="field"><label>タイトル <span class="req">＊</span></label><div class="input">例）牛乳を買う</div></div>
+          <div class="field"><label>期限・日付 <span class="req">＊</span></label><div class="input"><span>2026 / 06 / 01</span><span>📅</span></div></div>
+          <div class="field"><label>時間（任意）</label><div class="input"><span>18 : 00</span><span class="note">[×] 🕐</span></div></div>
+          <div class="field"><label>優先度 <span class="req">＊</span></label>
+            <div class="seg">
+              <div class="opt sel"><span class="dot high"></span>高</div>
+              <div class="opt"><span class="dot mid"></span>中</div>
+              <div class="opt"><span class="dot low"></span>低</div>
+            </div>
+          </div>
+          <div class="field"><label>担当者</label><div class="input"><span>未設定</span><span class="lock">🔒 プレミアム</span></div></div>
+          <div class="btn primary tap" onclick="go('tasks')">保存</div>
+        </div>
+      </section>
+
+      <!-- ⑤ MY TASKS (tab) -->
+      <section class="screen" id="s-mytasks">
+        <div class="appbar"><div class="title">Myタスク</div></div>
+        <div class="body" style="padding-bottom:70px;">
+          <p class="note" style="margin-bottom:10px;">自分が作成したタスクのみ表示</p>
+          <div class="box" style="padding:12px;margin-bottom:11px;">
+            <div style="display:flex;gap:10px;align-items:center;"><span class="status-chip">進</span>
+              <div class="t-main"><div class="t-title">書類を提出</div><div class="t-due">家族 / 6/1</div></div></div>
+            <div class="btn ghost tap" style="margin-top:10px;padding:8px;" onclick="alert('未実施/着手中のタスクをグループ全員にリマインド通知（ミュート除く）')">リマインド送信</div>
+          </div>
+          <div class="box" style="padding:12px;margin-bottom:11px;">
+            <div style="display:flex;gap:10px;align-items:center;"><span class="status-chip done">完</span>
+              <div class="t-main"><div class="t-title">牛乳を買う</div><div class="t-due">家族 / 完了 by 田中</div></div></div>
+            <div class="btn ghost tap" style="margin-top:10px;padding:8px;" onclick="alert('「完了」を取り消して着手中などに差し戻し')">差し戻し</div>
+          </div>
+        </div>
+        <nav class="nav" data-nav></nav>
+      </section>
+
+      <!-- ⑥ STATS (tab) -->
+      <section class="screen" id="s-stats">
+        <div class="appbar"><div class="title tap" onclick="go('groups')">家族 <span class="caret">▼</span> 統計</div></div>
+        <div class="body" style="padding-bottom:70px;">
+          <div class="stat-row"><span>期限内完了率</span><b>82%</b></div>
+          <div class="stat-row"><span>平均消化時間</span><b>1.4 日</b></div>
+          <p class="note" style="margin:14px 0 6px;">消化数ランキング</p>
+          <div class="rank"><span style="width:38px;">1 田中</span><span class="bar" style="width:120px;"></span><b style="font-family:var(--mono);">24</b></div>
+          <div class="rank"><span style="width:38px;">2 佐藤</span><span class="bar" style="width:74px;"></span><b style="font-family:var(--mono);">15</b></div>
+          <div class="rank me"><span style="width:38px;">3 自分</span><span class="bar" style="width:46px;"></span><b style="font-family:var(--mono);">9</b></div>
+          <p class="note" style="margin:14px 0 6px;">消化スピード（早い順）</p>
+          <div class="rank"><span style="width:38px;">1 佐藤</span><span class="bar" style="width:50px;background:var(--line);"></span><b style="font-family:var(--mono);">0.8日</b></div>
+          <div class="chartbox">折れ線：消化数の推移（無料は直近のみ）</div>
+        </div>
+        <nav class="nav" data-nav></nav>
+      </section>
+
+      <!-- ⑦ CHARACTER (tab) -->
+      <section class="screen" id="s-char">
+        <div class="appbar"><div class="title">キャラクター</div></div>
+        <div class="body" style="padding-bottom:70px;">
+          <div class="char-art"><div class="char-face">😣</div><div class="note">不調ぎみ…</div></div>
+          <div class="kv"><span>体調</span><span>32 / 100</span></div>
+          <div class="meter"><span style="width:32%;"></span></div>
+          <div class="kv" style="margin-top:10px;"><span>残タスク（全グループ合計）</span><b style="color:var(--ink);">18</b></div>
+          <div class="box" style="padding:12px;margin-top:14px;">
+            <div class="note" style="color:var(--ink);font-weight:600;margin-bottom:8px;">ステータス（装備＋体調で変動）</div>
+            <div class="kv"><span>攻撃</span><span>12</span></div>
+            <div class="kv"><span>防御</span><span>8</span></div>
+          </div>
+          <div class="btn ghost tap" style="margin-top:12px;">装備 ＜ 近日公開：ガチャ ＞</div>
+        </div>
+        <nav class="nav" data-nav></nav>
+      </section>
+
+      <!-- ⑧ GROUP SETTINGS -->
+      <section class="screen" id="s-groupset">
+        <div class="appbar"><div class="title"><span class="ic tap" onclick="go('tasks')" style="font-size:16px;">←</span> グループ設定</div></div>
+        <div class="body">
+          <div class="field"><label>グループ名</label><div class="input">家族</div></div>
+          <p class="note" style="margin-bottom:6px;">メンバー（4 / 6）</p>
+          <div class="mem"><span class="av">自</span>自分 <span class="note">（オーナー）</span></div>
+          <div class="mem"><span class="av">田</span>田中</div>
+          <div class="mem"><span class="av">佐</span>佐藤</div>
+          <div class="mem"><span class="av">鈴</span>鈴木</div>
+          <div class="btn tap" style="margin:14px 0;" onclick="alert('招待リンクを発行して共有（Universal/App Links）')">招待リンクを発行・共有</div>
+          <div class="premium">
+            <div style="font-weight:700;">★ プレミアムにする</div>
+            <div class="price">¥600 / 月 ・ グループ全員に適用</div>
+            <div class="btn primary tap" onclick="go('settings')">アップグレード</div>
+          </div>
+          <div class="btn ghost tap" style="margin-top:14px;color:var(--accent);border-color:var(--accent);">グループを退出 / 削除</div>
+        </div>
+      </section>
+
+      <!-- ⑨ SETTINGS (tab) -->
+      <section class="screen" id="s-settings">
+        <div class="appbar"><div class="title">設定</div></div>
+        <div class="body" style="padding-bottom:70px;">
+          <p class="note" style="margin-bottom:6px;">アカウント</p>
+          <div class="box tap" style="padding:11px;margin-bottom:8px;">プロフィール編集</div>
+          <div class="box tap" style="padding:11px;margin-bottom:16px;">アカウント登録（匿名→正式）</div>
+
+          <div class="premium" style="margin-bottom:16px;">
+            <div style="font-weight:700;">★ プレミアム</div>
+            <div class="price">¥600 / 月 ・ 広告除去＋上級機能</div>
+            <div class="btn primary tap" onclick="alert('RevenueCat 経由で購入。オーナーが払うとグループ全員へ適用')">アップグレード</div>
+          </div>
+
+          <p class="note" style="margin-bottom:6px;">通知設定</p>
+          <div class="box" style="padding:6px 12px;margin-bottom:8px;">
+            <div class="mem" style="border:none;"><span>グループ別の通知</span></div>
+            <div class="mem"><span class="note" style="color:var(--ink);">家族</span><span class="toggle on tap" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'ON':'OFF'">ON</span></div>
+            <div class="mem"><span class="note" style="color:var(--ink);">開発チーム</span><span class="toggle tap" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'ON':'OFF'">OFF</span></div>
+            <div class="mem" style="border:none;"><span class="note" style="color:var(--ink);">期限リマインド</span><span class="toggle on tap" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'ON':'OFF'">ON</span></div>
+          </div>
+          <div class="note" style="margin-top:14px;line-height:1.8;">利用規約 / プライバシー<br>ログアウト</div>
+        </div>
+        <nav class="nav" data-nav></nav>
+      </section>
+
+      <!-- STATUS DIALOG -->
+      <div class="overlay" id="dlg">
+        <div class="dialog">
+          <h3>ステータスを変更</h3>
+          <div class="sub" id="dlg-task">「タスク名」</div>
+          <div class="radio" onclick="pick(this)"><span class="ring"></span>未実施</div>
+          <div class="radio sel" onclick="pick(this)"><span class="ring"></span>着手中</div>
+          <div class="radio" onclick="pick(this)"><span class="ring"></span>完了</div>
+          <div class="warn">⚠ 変更するとグループ全員に通知が送られます（ミュート中の人を除く）</div>
+          <div class="dlg-actions">
+            <div class="btn tap" onclick="closeDlg()">キャンセル</div>
+            <div class="btn primary tap" onclick="closeDlg()">更新</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AD OVERLAY (character entry) -->
+      <div class="overlay" id="ad">
+        <div class="ad">
+          <div class="skip" id="ad-skip">スキップ 5</div>
+          <div class="lbl">VIDEO AD</div>
+          <div class="big">動画広告</div>
+          <div class="note" style="color:rgba(255,255,255,.7);">キャラ画面遷移時（無料のみ）<br>プレミアムでは非表示</div>
+        </div>
+      </div>
+
+    </div><!-- /screen-wrap -->
+  </div><!-- /phone -->
+
+  <!-- ============ LEGEND ============ -->
+  <aside class="legend">
+    <h2>9 SCREENS</h2>
+    <div class="li"><span class="n">①</span><span>認証 / オンボーディング（匿名開始・登録・招待参加）</span></div>
+    <div class="li"><span class="n">②</span><span>グループ一覧 / 切替（無料3つまで）</span></div>
+    <div class="li"><span class="n">③</span><span>タスク一覧（メイン・期限順・ステータス変更）</span></div>
+    <div class="li"><span class="n">④</span><span>タスク追加（タイトル・期限・優先度が必須）</span></div>
+    <div class="li"><span class="n">⑤</span><span>Myタスク（作成分・差し戻し・リマインド）</span></div>
+    <div class="li"><span class="n">⑥</span><span>統計 / ランキング</span></div>
+    <div class="li"><span class="n">⑦</span><span>キャラ（遷移時に動画広告・体調）</span></div>
+    <div class="li"><span class="n">⑧</span><span>グループ設定（招待・メンバー・課金）</span></div>
+    <div class="li"><span class="n">⑨</span><span>設定（登録・課金・通知ミュート）</span></div>
+
+    <div class="key">
+      <b>優先度</b><br>
+      <span class="swatch" style="background:var(--p-high)"></span>高 &nbsp;
+      <span class="swatch" style="background:var(--p-mid)"></span>中 &nbsp;
+      <span class="swatch" style="background:var(--p-low)"></span>低<br>
+      <b>ステータス</b> 未 / 進 / 完<br>
+      <b>★</b> プレミアム適用中
+    </div>
+
+    <div class="hintline">
+      ▸ 下部タブで主要5画面を移動<br>
+      ▸ ③のステータス[未/進/完]をタップ → 確認ダイアログ<br>
+      ▸ キャラ［タブ］→ 動画広告 → 画面表示<br>
+      ▸ ▼グループ名 → グループ一覧へ
+    </div>
+  </aside>
+</div>
+
+<script>
+  const NAV = [
+    ['tasks','▤','タスク'],['mytasks','◎','Myタスク'],
+    ['stats','▥','統計'],['char','☻','キャラ'],['settings','⚙','設定']
+  ];
+  // build nav bars
+  document.querySelectorAll('[data-nav]').forEach(nav=>{
+    nav.innerHTML = NAV.map(([id,g,l])=>
+      `<div class="item" data-tab="${id}" onclick="go('${id}')"><span class="gl">${g}</span>${l}</div>`).join('');
+  });
+
+  function setActiveTab(id){
+    document.querySelectorAll('.nav .item').forEach(it=>{
+      it.classList.toggle('on', it.dataset.tab===id);
+    });
+  }
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('s-'+id).classList.add('active');
+    setActiveTab(id);
+    if(id==='char'){ showAd(); }
+  }
+
+  // status dialog
+  function openDlg(task,cur){
+    document.getElementById('dlg-task').textContent = '「'+task+'」';
+    document.querySelectorAll('#dlg .radio').forEach(r=>{
+      r.classList.toggle('sel', r.textContent.trim().startsWith(
+        cur==='未'?'未実施':cur==='進'?'着手中':'完了'));
+    });
+    document.getElementById('dlg').classList.add('show');
+  }
+  function pick(el){
+    el.parentNode.querySelectorAll('.radio').forEach(r=>r.classList.remove('sel'));
+    el.classList.add('sel');
+  }
+  function closeDlg(){ document.getElementById('dlg').classList.remove('show'); }
+
+  // ad overlay with countdown
+  let adTimer=null;
+  function showAd(){
+    const ov=document.getElementById('ad'), skip=document.getElementById('ad-skip');
+    let n=5; skip.textContent='スキップ '+n; ov.classList.add('show');
+    clearInterval(adTimer);
+    adTimer=setInterval(()=>{
+      n--; 
+      if(n<=0){ clearInterval(adTimer); skip.textContent='✕ 閉じる'; skip.onclick=()=>ov.classList.remove('show'); }
+      else { skip.textContent='スキップ '+n; }
+    },1000);
+  }
+</script>
+</body>
+</html>
