@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../mock/mock_data.dart';
+import '../../providers/character_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// ⑦ キャラクター（体調・ステータス表示）。
 ///
 /// 仕様では遷移時に動画広告（無料のみ）を差し込むが、広告は Phase 5。
-/// 体調は全グループの未完了タスク総数から算出（[MockData.character]）。
-class CharacterScreen extends StatelessWidget {
+/// 体調は全グループの未完了タスク総数から自動算出（[characterProvider]）。
+class CharacterScreen extends ConsumerWidget {
   const CharacterScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
     final cs = Theme.of(context).colorScheme;
-    final c = MockData.character;
+    final c = ref.watch(characterProvider);
     final condition = c.condition;
 
     final conditionColor = condition >= 70

@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../mock/mock_data.dart';
+import '../../providers/group_providers.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/premium_card.dart';
 
 /// ⑨ 設定 / 課金（アカウント・プレミアム・グループ別通知ミュート）。
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final Map<String, bool> _notify = {
-    for (final g in MockData.groups) g.id: g.notificationsEnabled,
+    for (final g in ref.read(groupsProvider)) g.id: g.notificationsEnabled,
   };
   bool _dueReminder = true;
 
@@ -69,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Card(
             child: Column(
               children: [
-                for (final g in MockData.groups)
+                for (final g in ref.watch(groupsProvider))
                   SwitchListTile(
                     title: Text(g.name),
                     value: _notify[g.id]!,

@@ -1,81 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../mock/mock_data.dart';
 import '../../models/group.dart';
 import '../../models/task.dart';
-import '../../models/task_status.dart';
+import '../../providers/group_providers.dart';
+import '../../providers/task_providers.dart';
 import '../../theme/app_tokens.dart';
 import 'widgets/status_change_dialog.dart';
 import 'widgets/task_tile.dart';
 
 /// ③ タスク一覧（メイン画面）。
-class TasksScreen extends StatefulWidget {
+class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
 
-  @override
-  State<TasksScreen> createState() => _TasksScreenState();
-}
-
-class _TasksScreenState extends State<TasksScreen> {
-  late Group _group = MockData.groups.first;
-  late List<Task> _tasks = _loadTasks(_group.id);
-
-  List<Task> _loadTasks(String groupId) {
-    final list = List<Task>.from(MockData.tasksByGroup[groupId] ?? const []);
-    list.sort(compareTasks);
-    return list;
-  }
-
-  void _switchGroup(Group g) {
-    setState(() {
-      _group = g;
-      _tasks = _loadTasks(g.id);
-    });
-  }
-
-  Future<void> _openGroupPicker() async {
+  Future<void> _openGroupPicker(BuildContext context, WidgetRef ref) async {
+    final groups = ref.read(groupsProvider);
+    final currentId = ref.read(currentGroupIdProvider);
     final selected = await showModalBottomSheet<Group>(
       context: context,
-      builder: (context) => _GroupPickerSheet(
-        groups: MockData.groups,
-        selectedId: _group.id,
-      ),
+      builder: (context) =>
+          _GroupPickerSheet(groups: groups, selectedId: currentId),
     );
-    if (selected != null) _switchGroup(selected);
+    if (selected != null) {
+      ref.read(currentGroupIdProvider.notifier).select(selected.id);
+    }
   }
 
-  Future<void> _changeStatus(Task task) async {
+  Future<void> _changeStatus(
+      BuildContext context, WidgetRef ref, Task task) async {
     final next = await showStatusChangeDialog(
       context,
       taskTitle: task.title,
       current: task.status,
     );
     if (next == null || next == task.status) return;
-    setState(() {
-      final i = _tasks.indexWhere((t) => t.id == task.id);
-      if (i >= 0) {
-        _tasks[i] = _tasks[i].copyWith(
-          status: next,
-          completedBy: next == TaskStatus.done ? MockData.currentUserId : null,
-        );
-        _tasks.sort(compareTasks);
-      }
-    });
+    ref.read(tasksProvider.notifier).changeStatus(task.id, next);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
+    final group = ref.watch(currentGroupProvider);
+    final tasks = ref.watch(currentGroupTasksProvider);
+    final groups = ref.watch(groupsProvider);
+    final me = ref.watch(currentUserIdProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          onTap: _openGroupPicker,
+          onTap: () => _openGroupPicker(context, ref),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_group.name),
+              Text(group.name),
               const Icon(Icons.arrow_drop_down),
             ],
           ),
@@ -102,13 +80,13 @@ class _TasksScreenState extends State<TasksScreen> {
           Expanded(
             child: ListView.separated(
               padding: EdgeInsets.fromLTRB(t.spaceMd, t.spaceSm, t.spaceMd, t.spaceXl),
-              itemCount: _tasks.length + 1,
+              itemCount: tasks.length + 1,
               separatorBuilder: (_, _) => Divider(
                 height: 1,
                 color: Theme.of(context).colorScheme.outlineVariant,
               ),
               itemBuilder: (context, i) {
-                if (i == _tasks.length) {
+                if (i == tasks.length) {
                   return Padding(
                     padding: EdgeInsets.only(top: t.spaceMd),
                     child: Text(
@@ -117,19 +95,21 @@ class _TasksScreenState extends State<TasksScreen> {
                     ),
                   );
                 }
-                final task = _tasks[i];
+                final task = tasks[i];
                 return TaskTile(
                   task: task,
-                  creatorName: MockData.memberName(_group.id, task.createdBy),
+                  creatorName:
+                      memberNameOf(groups, group.id, task.createdBy, currentUserId: me),
                   completerName: task.completedBy == null
                       ? null
-                      : MockData.memberName(_group.id, task.completedBy!),
-                  onStatusTap: () => _changeStatus(task),
+                      : memberNameOf(groups, group.id, task.completedBy!,
+                          currentUserId: me),
+                  onStatusTap: () => _changeStatus(context, ref, task),
                 );
               },
             ),
           ),
-          if (!_group.isPremium) const _AdBanner(),
+          if (!group.isPremium) const _AdBanner(),
         ],
       ),
     );

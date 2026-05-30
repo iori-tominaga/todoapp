@@ -1,4 +1,3 @@
-import '../models/character_state.dart';
 import '../models/group.dart';
 import '../models/group_stats.dart';
 import '../models/member.dart';
@@ -136,29 +135,6 @@ class MockData {
       ),
     ],
   };
-
-  /// 指定グループのタスクを、誰の名前で表示するか引くためのヘルパ。
-  static String memberName(String groupId, String userId) {
-    if (userId == currentUserId) return '自分';
-    final group = groups.firstWhere((g) => g.id == groupId);
-    final m = group.members.where((m) => m.id == userId);
-    return m.isEmpty ? '不明' : m.first.displayName;
-  }
-
-  /// 全グループの未完了タスク総数（キャラの体調算出用）。
-  static int get totalPendingLoad {
-    var n = 0;
-    for (final list in tasksByGroup.values) {
-      n += list.where((t) => t.status != TaskStatus.done).length;
-    }
-    return n;
-  }
-
-  static CharacterState get character => CharacterState(
-        pendingLoad: totalPendingLoad,
-        attack: 12,
-        defense: 8,
-      );
 
   static const GroupStats familyStats = GroupStats(
     onTimeRate: 0.82,

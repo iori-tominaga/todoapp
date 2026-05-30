@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../mock/mock_data.dart';
+import '../../providers/group_providers.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/premium_card.dart';
 import 'widgets/invite_link_dialog.dart';
 
 /// ⑧ グループ設定（招待リンク・メンバー管理・プレミアム案内）。
-class GroupSettingsScreen extends StatelessWidget {
+class GroupSettingsScreen extends ConsumerWidget {
   const GroupSettingsScreen({super.key});
 
   void _snack(BuildContext context, String msg) {
@@ -31,10 +32,10 @@ class GroupSettingsScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
     final cs = Theme.of(context).colorScheme;
-    final group = MockData.groups.first;
+    final group = ref.watch(currentGroupProvider);
 
     return Scaffold(
       appBar: AppBar(

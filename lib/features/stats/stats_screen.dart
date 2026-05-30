@@ -1,19 +1,21 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../mock/mock_data.dart';
 import '../../models/group_stats.dart';
+import '../../providers/group_providers.dart';
+import '../../providers/stats_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// ⑥ グループ統計 / ランキング。
-class StatsScreen extends StatelessWidget {
+class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
-    final stats = MockData.familyStats;
-    final groupName = MockData.groups.first.name;
+    final stats = ref.watch(statsProvider);
+    final groupName = ref.watch(currentGroupProvider).name;
 
     return Scaffold(
       appBar: AppBar(title: Text('$groupName ・ 統計')),

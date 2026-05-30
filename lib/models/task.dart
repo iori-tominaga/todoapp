@@ -19,10 +19,14 @@ class Task {
     required this.createdAt,
     this.completedAt,
     this.completedBy,
+    this.groupId = '',
   });
 
   final String id;
   final String title;
+
+  /// 所属グループID。インメモリ/Firestore どちらでもタスクの帰属先を表す。
+  final String groupId;
 
   /// 期限の日付（必須）。時刻部分は無視し [dueTime] を正とする。
   final DateTime dueDate;
@@ -43,7 +47,14 @@ class Task {
   final DateTime? completedAt;
   final String? completedBy;
 
-  Task copyWith({TaskStatus? status, String? completedBy, DateTime? completedAt}) {
+  /// [completedAt] / [completedBy] は null を渡すと「変更なし」になってしまうため、
+  /// 明示的にクリアできるよう sentinel ([_keep]) を既定値に使う。
+  Task copyWith({
+    String? groupId,
+    TaskStatus? status,
+    Object? completedAt = _keep,
+    Object? completedBy = _keep,
+  }) {
     return Task(
       id: id,
       title: title,
@@ -55,11 +66,17 @@ class Task {
       createdBy: createdBy,
       assigneeId: assigneeId,
       createdAt: createdAt,
-      completedAt: completedAt ?? this.completedAt,
-      completedBy: completedBy ?? this.completedBy,
+      completedAt:
+          completedAt == _keep ? this.completedAt : completedAt as DateTime?,
+      completedBy:
+          completedBy == _keep ? this.completedBy : completedBy as String?,
+      groupId: groupId ?? this.groupId,
     );
   }
 }
+
+/// copyWith で「引数が渡されなかった」ことを表す番兵。
+const Object _keep = Object();
 
 /// 仕様 4.2 の厳密な並び替えロジック。
 ///

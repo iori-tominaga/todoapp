@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../mock/mock_data.dart';
+import '../../providers/group_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// ② グループ一覧 / 切替。
-class GroupListScreen extends StatelessWidget {
+class GroupListScreen extends ConsumerWidget {
   const GroupListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
 
     return Scaffold(
@@ -20,7 +21,7 @@ class GroupListScreen extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.all(t.spaceMd),
         children: [
-          for (final g in MockData.groups) ...[
+          for (final g in ref.watch(groupsProvider)) ...[
             Card(
               child: ListTile(
                 title: Text(g.name,
@@ -28,7 +29,10 @@ class GroupListScreen extends StatelessWidget {
                 subtitle: Text(
                     '👤${g.memberCount}${g.isPremium ? ' ・ ★プレミアム' : ''}'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/tasks'),
+                onTap: () {
+                  ref.read(currentGroupIdProvider.notifier).select(g.id);
+                  context.go('/tasks');
+                },
               ),
             ),
             SizedBox(height: t.spaceSm),

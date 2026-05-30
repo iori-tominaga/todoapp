@@ -1,34 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../mock/mock_data.dart';
 import '../../models/task.dart';
 import '../../models/task_status.dart';
+import '../../providers/group_providers.dart';
+import '../../providers/task_providers.dart';
 import '../../theme/app_tokens.dart';
 import '../../util/date_format.dart';
 
 /// ⑤ Myタスク（自分が作成したタスクのみ・差し戻し・リマインド送信）。
-class MyTasksScreen extends StatelessWidget {
+class MyTasksScreen extends ConsumerWidget {
   const MyTasksScreen({super.key});
 
-  /// 全グループから「自分が作成した」タスクを集める。
-  List<_MyTaskItem> _collect() {
-    final items = <_MyTaskItem>[];
-    for (final entry in MockData.tasksByGroup.entries) {
-      final group = MockData.groups.firstWhere((g) => g.id == entry.key);
-      for (final task in entry.value) {
-        if (task.createdBy == MockData.currentUserId) {
-          items.add(_MyTaskItem(groupName: group.name, task: task));
-        }
-      }
-    }
-    items.sort((a, b) => compareTasks(a.task, b.task));
-    return items;
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
-    final items = _collect();
+    final groups = ref.watch(groupsProvider);
+    final items = [
+      for (final task in ref.watch(myTasksProvider))
+        _MyTaskItem(
+          groupName: groups
+              .firstWhere((g) => g.id == task.groupId,
+                  orElse: () => groups.first)
+              .name,
+          task: task,
+        ),
+    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Myタスク')),
