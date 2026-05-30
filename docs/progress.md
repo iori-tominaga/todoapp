@@ -1,7 +1,7 @@
 # 開発の進捗・再開ガイド（progress.md）
 
 > このファイルは「コンテキストをクリアした後にスムーズ再開する」ための単一の道しるべ。
-> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-05-30（Phase 2 完了時点）
+> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-05-30（Phase 3 完了時点）
 
 ---
 
@@ -28,43 +28,55 @@
 | Phase 0 | Flutterプロジェクト基盤 | ✅ 完了 |
 | Phase 1 | 全画面をモックデータで実装 | ✅ 完了 |
 | Phase 2 | Repository層 + Riverpod化（mock差し替え可能に） | ✅ 完了 |
-| Phase 3 | 統計を実データ算出に差し替え（タスク履歴から集計） | ⏭ 次はここ |
-| Phase 4 | Firebase接続（認証 + Firestore Repository実装） | 未着手 |
+| Phase 3 | 統計を実データ算出に差し替え（タスク履歴から集計） | ✅ 完了 |
+| Phase 4 | Firebase接続（認証 + Firestore Repository実装） | ⏭ 次はここ |
 | Phase 5 | 広告・課金 | 未着手 |
 
 ---
 
-## 2. Phase 2 でやったこと（直近の完了内容）
+## 2. Phase 3 でやったこと（直近の完了内容）
 
-- `Task` モデルに `groupId` を追加。`copyWith` を番兵(`_keep`)パターンにし、完了系nullableをクリア可能に
-- Repository層を新設: `lib/data/task_repository.dart` / `group_repository.dart`（抽象 + InMemory実装、MockDataから種を読む）
-- Provider群を新設: `lib/providers/` 配下
-  - `repositories.dart`（taskRepositoryProvider / groupRepositoryProvider）
-  - `group_providers.dart`（currentUserId / groups / currentGroupId(Notifier) / currentGroup / memberNameOf）
-  - `task_providers.dart`（tasksProvider(Notifier) / currentGroupTasks / myTasks / totalPendingLoad）
-  - `character_providers.dart` / `stats_providers.dart`
-- 全画面を Consumer 化し、`MockData.xxx` 直参照を Provider 購読へ置換
-  （tasks / mytasks / character / stats / settings / group_list / group_settings）
-- 未使用化した `MockData.memberName` / `totalPendingLoad` / `character` と未使用importを削除
-- `flutter analyze` クリーン、`flutter build web` 成功、スクショ確認済み
+- `stats_providers.dart` の `statsProvider` を、`MockData.familyStats` 直返しから
+  **`tasksProvider` + `currentGroupId` の完了タスク履歴を集計する実装**へ差し替え
+  - 期限内完了率（完了日 ≤ 期限日）/ 平均消化時間（作成→完了の日数, 小数1桁）
+  - 消化数ランキング（completedBy 別カウント・多い順）
+  - 消化スピードランキング（completedBy 別の平均日数・速い順）
+  - 直近7日(月〜日)推移（**2026-06-01 月曜 起点に固定**。画面ラベルに合わせている）
+  - 完了が0件のグループはゼロ値を返す安全分岐あり
+- `lib/mock/mock_data.dart` に `_done` ヘルパーと `_familyDone`（完了履歴14件）を追加。
+  各メンバーの傾向（消化数・スピード・期限内率）に差が出るよう日付/所要時間を調整
+- 不要になった `MockData.familyStats` と `group_stats` import を削除
+- `flutter analyze` クリーン、`flutter build web` 成功、`6-stats.png` で実データ表示を目視確認
+  （完了率80% / 平均1.2日 / 田中6・佐藤4・自分3・鈴木2 / 推移 2,2,1,1,1,1,2）
 
-### 設計のキモ
-`TasksNotifier`（全タスク保持）→ `totalPendingLoadProvider` が watch → `characterProvider` が体調算出、の自動連鎖。
-タスク完了を呼ぶだけでキャラ体調が自動更新される。これが手書きNotifierを選んだ理由。
+### 仕組み: チェックポイント機構（このフェーズで新設）
+コンテキスト枯渇でクオリティが落ちるのを防ぐため、キリ目でクリア→スムーズ再開できる仕組みを追加。
+- `.claude/commands/checkpoint.md` … 区切る前に progress.md を最新化して「クリアOK」を案内
+- `.claude/commands/resume.md` … クリア後の一発目。progress.md と git から状況を復元し次の一手を提示
+
+### 設計のキモ（Phase 2 から継続）
+`TasksNotifier`（全タスク保持）→ 各派生Providerが watch の自動連鎖。
+統計も `tasksProvider` を watch しているので、タスクを完了するだけで各指標が再計算される。
 
 ---
 
-## 3. 次の一手（Phase 3）
+## 3. 次の一手（Phase 4）
 
-統計画面 `lib/features/stats/stats_screen.dart` が読む `statsProvider`（現状 `MockData.familyStats` 直返し）を、
-`tasksProvider` のタスク履歴から実際に集計するロジックに差し替える。
-- 期限内完了率 / 平均消化時間 / 消化数ランキング / スピードランキング / 直近7日の推移
-- 集計は `lib/providers/stats_providers.dart` 内で `ref.watch(tasksProvider)` を元に算出
-- 注意: モックタスクには完了履歴が少ないため、必要なら MockData にサンプル完了タスクを増やす
+Firebase 接続。`InMemory*Repository` を Firestore 実装へ差し替える（境界は Repository の内側だけ）。
+- 認証（匿名 or Google）で `currentUserId` を実値化（現状は `MockData.currentUserId` 固定）
+- `task_repository.dart` / `group_repository.dart` の Firestore 版を実装し、同期APIを Stream/Future へ
+- 統計の7日推移は今「2026-06-01 起点固定」。実データ接続時に**今日起点の直近7日**へ作り替える
+- `google-services.json` 等の秘密情報はコミットしない（.gitignore 済み）
 
 ---
 
 ## 4. 再開時の手順（クリア後にここから始める）
+
+> **いちばん簡単な再開方法**: 新しいセッションで `/resume` と打つ。
+> 作業のキリ目でクリアする前は `/checkpoint` を打つと、このファイルが自動で最新化される。
+> （コマンド定義: `.claude/commands/resume.md` / `checkpoint.md`）
+
+手動で再開する場合:
 
 1. このファイルと `docs/specs/requirements.md` を読む
 2. `git log --oneline -5` で直近の到達点を確認
@@ -93,5 +105,7 @@ npx -y kill-port 8080
 ## 5. 未解決メモ / TODO
 
 - キャラ体調の自動更新は**コード配線は正しいが実機タップでの目視確認は未**（静的スクショでは再現不可）
+- 統計の自動再計算（タスク完了→数字が動く）も同様にコード配線は正しいが実機タップ確認は未
+- 統計の7日推移は **2026-06-01 月曜 起点に固定**（モック期の暫定）。Phase 4 で今日起点へ
 - Phase 4 で Firebase 接続時、InMemory*Repository を Firestore実装へ差し替える
 - `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（Phase 4 認証で対応）
