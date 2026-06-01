@@ -81,8 +81,8 @@ class GroupSettingsScreen extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () =>
-                  showInviteLinkDialog(context, groupName: group.name),
+              onPressed: () => showInviteLinkDialog(context,
+                  groupId: group.id, groupName: group.name),
               icon: const Icon(Icons.link),
               label: const Text('招待リンクを発行・共有'),
             ),

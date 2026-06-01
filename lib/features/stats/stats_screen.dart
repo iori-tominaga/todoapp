@@ -192,8 +192,18 @@ class _RankBar extends StatelessWidget {
   }
 }
 
-/// 直近7日の曜日ラベル（基準日 2026-06-01 月曜 起点）。
-const _weekdayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+const _weekdayKanji = ['月', '火', '水', '木', '金', '土', '日'];
+
+/// 今日を末尾とする直近7日の曜日ラベル。statsProvider の集計範囲と一致させる。
+List<String> _recentWeekdayLabels() {
+  final now = DateTime.now();
+  final start =
+      DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+  return [
+    for (var i = 0; i < 7; i++)
+      _weekdayKanji[start.add(Duration(days: i)).weekday - 1],
+  ];
+}
 
 class _WeeklyChart extends StatelessWidget {
   const _WeeklyChart({required this.values});
@@ -203,6 +213,7 @@ class _WeeklyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final labelStyle = Theme.of(context).textTheme.labelSmall;
+    final weekdayLabels = _recentWeekdayLabels();
     final spots = [
       for (var i = 0; i < values.length; i++)
         FlSpot(i.toDouble(), values[i].toDouble()),
@@ -234,12 +245,12 @@ class _WeeklyChart extends StatelessWidget {
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final i = value.round();
-                if (i < 0 || i >= _weekdayLabels.length) {
+                if (i < 0 || i >= weekdayLabels.length) {
                   return const SizedBox.shrink();
                 }
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text(_weekdayLabels[i], style: labelStyle),
+                  child: Text(weekdayLabels[i], style: labelStyle),
                 );
               },
             ),

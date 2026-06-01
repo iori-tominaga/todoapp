@@ -1,7 +1,9 @@
 # 開発の進捗・再開ガイド（progress.md）
 
 > このファイルは「コンテキストをクリアした後にスムーズ再開する」ための単一の道しるべ。
-> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-01（Phase 4 完了時点）
+> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-02（Phase 5 実機検証OK・参加時タスク同期バグ修正済み）
+>
+> 🌐 公開URL: https://group-todo-d07c0.web.app （Firebase Hosting・最新ビルド配信済み）
 
 ---
 
@@ -30,8 +32,9 @@
 | Phase 2 | Repository層 + Riverpod化（mock差し替え可能に） | ✅ 完了 |
 | Phase 3 | 統計を実データ算出に差し替え（タスク履歴から集計） | ✅ 完了 |
 | Phase 4 | 非同期土台 + 匿名認証 + Firestoreスケルトン（設計と土台） | ✅ 完了 |
-| Phase 4-接続 | 実Firebase接続（手順書どおりProvider差し替え） | ⏭ オーナー操作待ち |
-| Phase 5 | 広告・課金 | 未着手 |
+| Phase 4-接続 | 実Firebase接続（Provider差し替え・実プロジェクト稼働） | ✅ 完了 |
+| Phase 5 | グループ作成＋招待リンク＋参加（実DBを使える状態に） | ✅ 実機検証OK |
+| Phase 6 | 広告・課金 | 未着手 |
 
 ---
 
@@ -73,19 +76,90 @@
 
 ---
 
+## 2.5. Phase 4-接続 でやったこと（実Firebase稼働）
+
+「スケルトンを実Firebaseプロジェクトに繋ぐ」を完遂。**画面コードは無改修**で切替。
+
+### 実プロジェクトと認証
+- Firebaseプロジェクト **`group-todo-d07c0`**（Spark無料プラン・カード未登録＝課金なし）
+- 匿名認証を有効化、Firestore作成（ロケーション設定済み）
+- Firebase CLI でログイン（`re.zero.06onioni@gmail.com`）。
+  📱スマホのみ環境のため winpty で PTY 確保＋FIFO で認証コード注入してOAuth突破
+- FlutterFire CLI で `lib/firebase_options.dart` 生成（**gitignore済み・コミット禁止**）
+
+### Provider 差し替え（mock → Firestore）
+- `lib/providers/repositories.dart` を Firestore 実装に配線
+  （`taskRepositoryProvider`=`FirestoreTaskRepository`、`groupRepositoryProvider`=
+  uid付き`FirestoreGroupRepository`、`authRepositoryProvider`=`FirebaseAuthRepository`）。
+  InMemory/Mock クラスはロールバック用に残置
+- `lib/data/firestore_repositories.dart` をスケルトン→**実装に書き換え**
+  （`collectionGroup('tasks').snapshots()`、`groups` を `memberIds arrayContains uid` で購読、
+  `_taskFromDoc` は `reference.parent.parent?.id` で groupId 復元、enum は `.name` で直列化）
+- `lib/main.dart` で `Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)`
+
+### セキュリティルール（CLIデプロイ済み）
+- `firestore.rules`：groups は `uid in resource.data.memberIds`、tasks は親groupの `get()` で判定
+- `firebase.json`／`firestore.indexes.json` を整備し `firebase deploy` 系で配信
+
+### 検証
+- `flutter build web` 成功。`dev/verify_boot.mjs` で起動検証
+  → コンソールに Firebase core/firestore/auth の初期化ログ、**エラー0件**、
+  onboarding画面が正常描画。配線の成立を実証済み
+
+---
+
+## 2.6. Phase 5 でやったこと（グループ作成＋招待＋参加）
+
+実DBを「使える状態」にした。招待は**URLリンク方式**。Cloud Function 不使用（Spark無料）。
+
+### 作成・招待・参加（Repository＋UI）
+- `GroupRepository` に `createGroup` / `createInvite` / `resolveInvite` / `joinGroup` を追加。
+  Firestore実装は `memberIds:[uid]` / `members:[{自分,owner}]` を書き、参加は **arrayUnion**
+  で自分だけ追加（読み取り不要＝非メンバーでもルール内で書ける）
+- 招待は `invites/{code}`（8桁コード→groupId）。リンクは現在の公開URL基準で
+  `…/#/join?code=XXXX` を生成（`Uri.base`、dart:html不要）
+- UI: 空状態画面（`tasks_screen` の `_NoGroupsScreen`）に「作成」「招待リンクで参加」。
+  `group_create_screen`（名前＋表示名で実書き込み）、`invite_link_dialog`（実コード発行）、
+  `join_screen`（`/join?code=` 着地→匿名サインイン→解決→参加→`/tasks`）
+- ルーター: `/join` を**認証ガードの例外**にして未ログインでも着地可能に
+
+### タスク購読をマルチグループ安全に（Phase 4-接続の穴を塞いだ）
+- `collectionGroup('tasks')` 全横断をやめ、**所属グループのtasksだけ購読してマージ**
+  （`watchForGroups`）。`tasksProvider` を `groupsProvider` 依存に。非メンバーのtasksに
+  クエリが触れないのでルールに弾かれない
+
+### セキュリティルール（CLIデプロイ済み）
+- groups: `allow create`（作成者=自分判定）／`allow update` は既存メンバー or `isSelfJoin()`
+  （自分だけ追加・他人を消さない・name/isPremium/memberLimit不変）
+- tasks: 親グループの `memberIds` で判定（従来どおり）
+- invites: read=認証済み / create=そのグループのメンバー / update・delete=不可
+
+### 配信・検証
+- `firebase.json` に Hosting 追加。`flutter build web` → `firebase deploy`
+  で **https://group-todo-d07c0.web.app** に公開
+- `dev/verify_boot.mjs` でローカル／本番URLとも起動検証：Firebase初期化・**エラー0件**
+- ✅ **実機で「作成→招待→参加→双方向同期」まで確認OK**（2026-06-02）
+
+### 参加直後にタスクが見えないバグの修正（2026-06-02）
+- 症状: 後から参加した人が、自分でタスクを1個追加するまで既存タスクを見られない
+- 原因: 参加直後、タスク読み取りルールの `get(group)` が旧 `memberIds` を見て
+  最初の `snapshots()` 購読が一瞬拒否される。Firestoreのリスナーは**エラーで切れると自力復活しない**
+- 修正: `firestore_repositories.dart` の `watchForGroups` を**自己修復型**に。
+  購読がエラーで切れたら1秒待って張り直し、権限伝播後に既存タスクを拾う（正常系は無影響）
+- ⚠️ Flutter Web の Service Worker キャッシュが頑固。再デプロイ後はスマホで
+  「Safari設定→詳細→Webサイトデータ」削除 or プライベートタブで最新版を読ませる
+
+---
+
 ## 3. 次の一手
 
-土台は完成済み。選択肢は2つ:
+Phase 5 まで実機検証OK。コア（作成→招待→参加→同期）は動く状態。次の候補：
 
-### A. 実Firebase接続（Phase 4-接続）
-`docs/specs/firebase-setup.md` の手順どおり進める。要オーナー操作（📱コンソール:
-プロジェクト作成・匿名認証有効化・Firestore作成・セキュリティルール）。
-Claude側は FlutterFire 設定・スケルトン実装・Provider差し替え（💻）。画面は無改修で切替。
-- `google-services.json` 等の秘密情報はコミットしない（.gitignore 済み）
+### A. Phase 6（広告・課金）へ
+`_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。
 
-### B. Phase 5（広告・課金）へ進む
-実接続を後回しにし先に機能を積む。`_AdBanner`（tasks_screen）やグループ `isPremium` は
-既にUIにあるので、課金導線から着手できる。
+### B. 仕上げ系TODOの消化（下記「未解決メモ」）
+無料上限のサーバ側強制、アカウント昇格（匿名→Google/メール）、プロフィール実データ化 など。
 
 ---
 
@@ -106,13 +180,20 @@ Claude側は FlutterFire 設定・スケルトン実装・Provider差し替え�
 export PATH="$PATH:/c/Users/rezer/flutter/bin"
 flutter analyze
 flutter build web --no-tree-shake-icons
-# 配信（バックグラウンド）→ スクショ → 後始末
+# ローカル配信（バックグラウンド）→ スクショ → 後始末
 npx -y serve@14 build/web -l 8080      # run_in_background
 node dev/screenshot.mjs http://localhost:8080
+node dev/verify_boot.mjs http://localhost:8080   # 起動＋コンソールエラー検証
 npx -y kill-port 8080
+
+# Firebase（CLIはグローバル設置・PATH非経由なので node 直叩き）
+FB="node $(npm root -g)/firebase-tools/lib/bin/firebase.js"
+$FB deploy --only firestore:rules --project group-todo-d07c0
+$FB deploy --only hosting        --project group-todo-d07c0   # → https://group-todo-d07c0.web.app
 ```
 - スクショ出力: `dev/shots/*.png`（撮影対象は `dev/screenshot.mjs` の SCREENS）
-- go_router はハッシュURL: `http://localhost:8080/#/<path>`
+- go_router はハッシュURL: `http://localhost:8080/#/<path>`（招待は `/#/join?code=XXXX`）
+- 本番URL: https://group-todo-d07c0.web.app （Hosting・anon認証は web.app ドメイン自動許可）
 
 ### Git
 - リモート: `origin = https://github.com/iori-tominaga/todoapp.git`
@@ -123,8 +204,12 @@ npx -y kill-port 8080
 
 ## 5. 未解決メモ / TODO
 
+- ✅ 作成→招待→参加→双方向同期は実機検証OK（2026-06-02）。参加直後の同期バグも修正済み（§2.6）
+- **自己参加ルールの限界**: `members` 配列の中身（`isOwner` 等）はルールで検証していない。
+  招待コード/groupIdが漏れなければ実害は低いが、厳密にやるなら map 内容の検証 or 招待ドキュメント側で制御
+- グループ作成・参加に**無料上限（3グループ/6人）のサーバ側強制は未実装**（UI表記のみ）。必要なら後で
 - キャラ体調の自動更新・統計の自動再計算は**コード配線は正しいが実機タップ確認は未**（静的スクショでは再現不可）
-- 統計の7日推移は **2026-06-01 月曜 起点に固定**（モック期の暫定）。実接続時に今日起点へ（手順書のTODO参照）
-- 実接続時 `updateStatus` に `groupId` 引数が必要（Firestoreはパス指定）。`docs/specs/firebase-setup.md` 参照
+- 統計の7日推移は **今日起点**に修正済み（旧: 6/1月曜固定）。`stats_providers.dart`/`stats_screen.dart`
+- `updateStatus` は `groupId` 引数を追加済み（Firestoreパス指定対応）
 - `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（アカウント昇格実装時に対応）
 - アカウント昇格（匿名→Google/メール）は `account_register_screen.dart` がモックのまま

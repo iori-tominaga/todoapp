@@ -128,10 +128,13 @@ service cloud.firestore {
 
 ## 実接続時にあわせて直すTODO
 
-- [ ] **統計の7日推移を「今日起点」へ**: `lib/providers/stats_providers.dart` は今
-      `DateTime(2026, 6, 1)` 固定（モック期の暫定）。実データ接続時に
-      `DateTime.now()` 起点の直近7日へ作り替える。画面の曜日ラベルも追従させる。
-- [ ] `updateStatus` に `groupId` を引数追加（Firestoreはパス指定が必要なため）。
-      呼び出し元 `TasksNotifier.changeStatus` も合わせて更新。
+- [x] **統計の7日推移を「今日起点」へ**: `stats_providers.dart` を
+      `DateTime.now()` 起点の直近7日に変更済み。`stats_screen.dart` の曜日ラベルも追従。
+- [x] `updateStatus` に `groupId` を引数追加済み（Firestoreパス指定対応）。
+      呼び出し元 `TasksNotifier.changeStatus` / `tasks_screen.dart` も更新済み。
+- [x] **グループ作成フロー＋招待リンク＋参加（Phase 5）実装済み**。
+      groups の `allow create` / 自己参加 `allow update`（`isSelfJoin()`）／`invites` ルール追加。
+      タスク購読は `collectionGroup` をやめ所属グループのマージ（`watchForGroups`）に変更。
+      Hosting 公開: https://group-todo-d07c0.web.app 。※対話フローは実機検証待ち。
 - [ ] `profile_edit_screen.dart` の `MockData.currentUserName` を認証プロフィールへ。
 - [ ] アカウント昇格（匿名→Google/メール）の実装（`account_register_screen.dart`）。

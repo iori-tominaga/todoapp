@@ -6,16 +6,21 @@ import '../models/task_status.dart';
 
 /// タスクの読み書きを抽象化する。
 ///
-/// 読み取りは [watchAll] のストリーム購読、書き込みは [Future] 型。
-/// Firestore 実装では [watchAll] が `snapshots()`、書き込みが `set`/`update`
-/// にそのまま対応する。差し替えはこの境界より内側だけで完結する。
+/// 読み取りは [watchForGroups] のストリーム購読、書き込みは [Future] 型。
+/// Firestore 実装では [watchForGroups] が各グループの `snapshots()` マージ、
+/// 書き込みが `set`/`update` に対応する。差し替えはこの境界より内側で完結する。
 abstract class TaskRepository {
-  /// 全グループのタスクをリアルタイムに流す。最初に現在値を即時 emit する。
-  Stream<List<Task>> watchAll();
+  /// 指定した所属グループ群のタスクをリアルタイムに流す（複数グループをマージ）。
+  ///
+  /// 全DB横断（collectionGroup）ではなく、メンバーであるグループだけを購読することで
+  /// 非メンバーのタスクにクエリが触れず、セキュリティルールに弾かれない。
+  Stream<List<Task>> watchForGroups(List<String> groupIds);
 
   /// ステータスを変更する。完了にした場合は [completedBy] を記録し、
   /// 完了以外に戻した場合は完了情報をクリアする。
-  Future<void> updateStatus(String taskId, TaskStatus status, String? completedBy);
+  /// Firestore 実装はパス指定が必要なため [groupId] を受け取る。
+  Future<void> updateStatus(
+      String groupId, String taskId, TaskStatus status, String? completedBy);
 
   /// 新規タスクを追加する。
   Future<void> add(Task task);
@@ -40,14 +45,17 @@ class InMemoryTaskRepository implements TaskRepository {
       StreamController<List<Task>>.broadcast();
 
   @override
-  Stream<List<Task>> watchAll() async* {
-    yield _snapshot();
-    yield* _controller.stream;
+  Stream<List<Task>> watchForGroups(List<String> groupIds) async* {
+    final ids = groupIds.toSet();
+    List<Task> filter(List<Task> all) =>
+        all.where((t) => ids.contains(t.groupId)).toList();
+    yield filter(_snapshot());
+    yield* _controller.stream.map(filter);
   }
 
   @override
   Future<void> updateStatus(
-      String taskId, TaskStatus status, String? completedBy) async {
+      String groupId, String taskId, TaskStatus status, String? completedBy) async {
     final i = _tasks.indexWhere((t) => t.id == taskId);
     if (i < 0) return;
     final done = status == TaskStatus.done;

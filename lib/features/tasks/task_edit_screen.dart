@@ -1,30 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/priority.dart';
+import '../../models/task.dart';
+import '../../models/task_status.dart';
+import '../../providers/group_providers.dart';
+import '../../providers/task_providers.dart';
 import '../../theme/app_tokens.dart';
 
 /// ④ タスク追加 / 編集。
 ///
 /// 必須: タイトル・期限(日付)・優先度。時間と担当者は任意。
-/// Phase 1 はUIのみ（保存はモックで一覧へ戻るだけ）。
-class TaskEditScreen extends StatefulWidget {
+/// 保存で現在のグループに Firestore 書き込みする。
+class TaskEditScreen extends ConsumerStatefulWidget {
   const TaskEditScreen({super.key});
 
   @override
-  State<TaskEditScreen> createState() => _TaskEditScreenState();
+  ConsumerState<TaskEditScreen> createState() => _TaskEditScreenState();
 }
 
-class _TaskEditScreenState extends State<TaskEditScreen> {
+class _TaskEditScreenState extends ConsumerState<TaskEditScreen> {
   final _titleController = TextEditingController();
-  DateTime _dueDate = DateTime(2026, 6, 1);
+  DateTime _dueDate = DateTime.now();
   TimeOfDay? _dueTime;
   Priority _priority = Priority.high;
+  bool _saving = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     super.dispose();
+  }
+
+  Future<void> _save() async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('タイトルを入力してください')));
+      return;
+    }
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    final groupId = ref.read(currentGroupIdProvider);
+    final me = ref.read(currentUserIdProvider);
+    final dueTime = _dueTime == null
+        ? null
+        : '${_dueTime!.hour.toString().padLeft(2, '0')}:'
+            '${_dueTime!.minute.toString().padLeft(2, '0')}';
+
+    final task = Task(
+      id: '',
+      title: title,
+      dueDate: DateTime(_dueDate.year, _dueDate.month, _dueDate.day),
+      hasTime: _dueTime != null,
+      dueTime: dueTime,
+      priority: _priority,
+      status: TaskStatus.notStarted,
+      createdBy: me,
+      // 番兵: 0 だと _taskToMap が serverTimestamp に置き換える。
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+      groupId: groupId,
+    );
+
+    try {
+      await ref.read(tasksProvider.notifier).add(task);
+      if (!mounted) return;
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('保存に失敗しました: $e')));
+    }
   }
 
   Future<void> _pickDate() async {
@@ -103,8 +154,14 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
           SizedBox(height: t.spaceXl),
 
           FilledButton(
-            onPressed: () => context.pop(),
-            child: const Text('保存'),
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('保存'),
           ),
         ],
       ),

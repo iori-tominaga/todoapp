@@ -76,9 +76,10 @@ final statsProvider = Provider<GroupStats>((ref) {
       .toList()
     ..sort((a, b) => a.value.compareTo(b.value));
 
-  // 直近7日(月〜日)の消化数推移。画面ラベルに合わせ 2026-06-01(月) 起点。
-  // Phase 4 で実データ接続時に「今日起点の直近7日」へ作り替える。
-  final weekStart = DateTime(2026, 6, 1);
+  // 直近7日の消化数推移（今日を末尾とする7日間）。画面の曜日ラベルと範囲を揃える。
+  final now = DateTime.now();
+  final weekStart =
+      DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
   final weeklyCompleted = [
     for (var i = 0; i < 7; i++)
       done

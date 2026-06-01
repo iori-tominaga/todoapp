@@ -1,30 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../providers/repositories.dart';
 import '../../../theme/app_tokens.dart';
 
 /// 招待リンク表示ダイアログ。
 ///
-/// 発行済みリンクを表示し、コピー / 共有できる（共有はモック）。
-/// 実際の発行は Universal Links / App Links を想定。
+/// 開いた時に Firestore へ招待コードを発行し、`code → groupId` を引けるようにする。
+/// 生成したリンク（現在の公開URL基準のハッシュルート）をコピー / 共有できる。
 Future<void> showInviteLinkDialog(
   BuildContext context, {
+  required String groupId,
   required String groupName,
 }) {
   return showDialog<void>(
     context: context,
-    builder: (context) => _InviteLinkDialog(groupName: groupName),
+    builder: (context) =>
+        _InviteLinkDialog(groupId: groupId, groupName: groupName),
   );
 }
 
-class _InviteLinkDialog extends StatelessWidget {
-  const _InviteLinkDialog({required this.groupName});
+class _InviteLinkDialog extends ConsumerStatefulWidget {
+  const _InviteLinkDialog({required this.groupId, required this.groupName});
 
+  final String groupId;
   final String groupName;
 
-  String get _link => 'https://grouptodo.app/invite/abc123';
+  @override
+  ConsumerState<_InviteLinkDialog> createState() => _InviteLinkDialogState();
+}
 
-  void _snack(BuildContext context, String msg) {
+class _InviteLinkDialogState extends ConsumerState<_InviteLinkDialog> {
+  String? _link;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _issue();
+  }
+
+  Future<void> _issue() async {
+    try {
+      final code =
+          await ref.read(groupRepositoryProvider).createInvite(widget.groupId);
+      if (!mounted) return;
+      setState(() => _link = _buildLink(code));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = '発行に失敗しました: $e');
+    }
+  }
+
+  /// 現在の公開URLを基準にハッシュルートの参加リンクを組み立てる。
+  String _buildLink(String code) {
+    final base = Uri.base;
+    final origin =
+        '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}';
+    return '$origin/#/join?code=$code';
+  }
+
+  void _snack(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(msg)));
@@ -34,6 +71,7 @@ class _InviteLinkDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final cs = Theme.of(context).colorScheme;
+    final link = _link;
 
     return AlertDialog(
       title: const Text('招待リンク'),
@@ -41,7 +79,7 @@ class _InviteLinkDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('「$groupName」への招待リンクを発行しました。',
+          Text('「${widget.groupName}」への招待リンクを発行しました。',
               style: Theme.of(context).textTheme.bodySmall),
           SizedBox(height: t.spaceSm),
           Container(
@@ -51,11 +89,30 @@ class _InviteLinkDialog extends StatelessWidget {
               color: cs.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(t.radiusSm),
             ),
-            child: Text(_link,
-                style: Theme.of(context).textTheme.bodySmall),
+            child: _error != null
+                ? Text(_error!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: t.priorityHigh))
+                : link == null
+                    ? Row(
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: t.spaceSm),
+                          Text('発行中…',
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      )
+                    : Text(link,
+                        style: Theme.of(context).textTheme.bodySmall),
           ),
           SizedBox(height: t.spaceXs),
-          Text('リンクは7日間有効です。',
+          Text('このリンクを家族に送ると、開いた人がグループに参加できます。',
               style: Theme.of(context).textTheme.labelSmall),
         ],
       ),
@@ -65,20 +122,13 @@ class _InviteLinkDialog extends StatelessWidget {
           child: const Text('閉じる'),
         ),
         TextButton(
-          onPressed: () async {
-            await Clipboard.setData(ClipboardData(text: _link));
-            if (context.mounted) {
-              _snack(context, 'リンクをコピーしました');
-            }
-          },
+          onPressed: link == null
+              ? null
+              : () async {
+                  await Clipboard.setData(ClipboardData(text: link));
+                  if (mounted) _snack('リンクをコピーしました');
+                },
           child: const Text('コピー'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _snack(context, '共有シートを開く（準備中）');
-          },
-          child: const Text('共有'),
         ),
       ],
     );

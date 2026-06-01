@@ -9,6 +9,7 @@ import '../features/character/character_screen.dart';
 import '../features/groups/group_create_screen.dart';
 import '../features/groups/group_list_screen.dart';
 import '../features/groups/group_settings_screen.dart';
+import '../features/groups/join_screen.dart';
 import '../features/legal/legal_screen.dart';
 import '../features/mytasks/mytasks_screen.dart';
 import '../features/settings/profile_edit_screen.dart';
@@ -36,6 +37,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/tasks',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // 招待リンクは未ログインでも通す（着地後に自前でサインインして参加する）。
+      if (state.matchedLocation == '/join') return null;
       final signedIn = ref.read(isSignedInProvider);
       final onOnboarding = state.matchedLocation == '/onboarding';
       if (!signedIn) return onOnboarding ? null : '/onboarding';
@@ -46,6 +49,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/join',
+      builder: (context, state) =>
+          JoinScreen(code: state.uri.queryParameters['code']),
     ),
     GoRoute(
       path: '/groups',

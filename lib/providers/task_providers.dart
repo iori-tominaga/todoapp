@@ -8,19 +8,22 @@ import 'repositories.dart';
 /// 全グループのタスクを一元管理する Notifier。
 ///
 /// 一覧・Myタスク・キャラ体調などはすべてこの状態から派生する。
-/// [TaskRepository.watchAll] のストリームを購読し、書き込みは [TaskRepository]
-/// 経由で行う（書き込み後はストリームが再 emit して state が自動更新される）。
+/// 所属グループ（[groupsProvider]）のタスクを [TaskRepository.watchForGroups] で
+/// 購読し、書き込みは [TaskRepository] 経由（書き込み後はストリーム再 emit で自動更新）。
 class TasksNotifier extends StreamNotifier<List<Task>> {
   @override
-  Stream<List<Task>> build() => ref.watch(taskRepositoryProvider).watchAll();
+  Stream<List<Task>> build() {
+    final groupIds = ref.watch(groupsProvider).map((g) => g.id).toList();
+    return ref.watch(taskRepositoryProvider).watchForGroups(groupIds);
+  }
 
   /// ステータスを変更する。完了時は現在のユーザーを完了者として記録する。
-  Future<void> changeStatus(String taskId, TaskStatus status) async {
+  Future<void> changeStatus(Task task, TaskStatus status) async {
     final completedBy =
         status == TaskStatus.done ? ref.read(currentUserIdProvider) : null;
     await ref
         .read(taskRepositoryProvider)
-        .updateStatus(taskId, status, completedBy);
+        .updateStatus(task.groupId, task.id, status, completedBy);
   }
 
   /// 新規タスクを追加する。

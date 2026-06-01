@@ -35,7 +35,7 @@ class TasksScreen extends ConsumerWidget {
       current: task.status,
     );
     if (next == null || next == task.status) return;
-    ref.read(tasksProvider.notifier).changeStatus(task.id, next);
+    ref.read(tasksProvider.notifier).changeStatus(task, next);
   }
 
   @override
@@ -45,6 +45,10 @@ class TasksScreen extends ConsumerWidget {
     final tasks = ref.watch(currentGroupTasksProvider);
     final groups = ref.watch(groupsProvider);
     final me = ref.watch(currentUserIdProvider);
+
+    if (groups.isEmpty) {
+      return const _NoGroupsScreen();
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -114,6 +118,109 @@ class TasksScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// グループ未所属時の入口（作成 / 招待リンクで参加）。
+class _NoGroupsScreen extends StatelessWidget {
+  const _NoGroupsScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('グループTodo')),
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(t.spaceLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: t.seed.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(t.radiusLg),
+                ),
+                child: Icon(Icons.groups, size: 44, color: t.seed),
+              ),
+              SizedBox(height: t.spaceLg),
+              Text('まずはグループを作りましょう',
+                  style: Theme.of(context).textTheme.titleMedium),
+              SizedBox(height: t.spaceXs),
+              Text(
+                'グループを作るか、家族から届いた\n招待リンクで参加できます。',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              SizedBox(height: t.spaceXl),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => context.push('/groups/create'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('グループを作成'),
+                ),
+              ),
+              SizedBox(height: t.spaceSm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _joinByCode(context),
+                  icon: const Icon(Icons.link),
+                  label: const Text('招待リンクで参加'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinByCode(BuildContext context) async {
+    final controller = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('招待リンクで参加'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '招待リンク または コードを貼り付け',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('参加'),
+          ),
+        ],
+      ),
+    );
+    if (code == null || code.isEmpty || !context.mounted) return;
+    context.push('/join?code=${Uri.encodeComponent(parseInviteCode(code))}');
+  }
+}
+
+/// 貼り付けられた文字列から招待コードを取り出す。
+/// リンク（`?code=XXXX`）でもコード単体でも受け取れる。
+String parseInviteCode(String input) {
+  final uri = Uri.tryParse(input);
+  final fromQuery = uri?.queryParameters['code'];
+  if (fromQuery != null && fromQuery.isNotEmpty) return fromQuery;
+  // ハッシュURL（/#/join?code=...）対策でフラグメントも見る。
+  final frag = uri?.fragment ?? '';
+  final fragCode = Uri.tryParse(frag)?.queryParameters['code'];
+  if (fragCode != null && fragCode.isNotEmpty) return fragCode;
+  return input;
 }
 
 class _AdBanner extends StatelessWidget {

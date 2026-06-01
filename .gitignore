@@ -66,3 +66,6 @@ dev/shots/
 **/google-services.json
 **/GoogleService-Info.plist
 lib/firebase_options.dart
+
+# Firebase deploy cache
+.firebase/
