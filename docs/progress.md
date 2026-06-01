@@ -153,13 +153,17 @@
 
 ## 3. 次の一手
 
-Phase 5 まで実機検証OK。コア（作成→招待→参加→同期）は動く状態。次の候補：
+進行順は **C →（今ここ）→ B → A** で合意済み。
 
-### A. Phase 6（広告・課金）へ
+### ✅ C. 動作検証（完了・2026-06-02）
+キャラ体調／統計の自動更新を `test/character_stats_reactive_test.dart` で検証済み（§5）。
+
+### ⏭ B. 仕上げ系TODOの消化（次はここ）
+下記「未解決メモ」の消化。候補: 無料上限（3グループ/6人）のサーバ側強制、
+アカウント昇格（匿名→Google/メール）、プロフィール実データ化、自己参加ルールの厳密化 など。
+
+### A. Phase 6（広告・課金）へ（Bの後）
 `_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。
-
-### B. 仕上げ系TODOの消化（下記「未解決メモ」）
-無料上限のサーバ側強制、アカウント昇格（匿名→Google/メール）、プロフィール実データ化 など。
 
 ---
 
@@ -208,7 +212,9 @@ $FB deploy --only hosting        --project group-todo-d07c0   # → https://grou
 - **自己参加ルールの限界**: `members` 配列の中身（`isOwner` 等）はルールで検証していない。
   招待コード/groupIdが漏れなければ実害は低いが、厳密にやるなら map 内容の検証 or 招待ドキュメント側で制御
 - グループ作成・参加に**無料上限（3グループ/6人）のサーバ側強制は未実装**（UI表記のみ）。必要なら後で
-- キャラ体調の自動更新・統計の自動再計算は**コード配線は正しいが実機タップ確認は未**（静的スクショでは再現不可）
+- ✅ キャラ体調の自動更新・統計の自動再計算は **Widgetテストで検証済み**（2026-06-02）。
+  `test/character_stats_reactive_test.dart`：InMemory/Mockで完了→体調が再描画・統計が再集計されることを確認。
+  実行: `flutter test test/character_stats_reactive_test.dart`
 - 統計の7日推移は **今日起点**に修正済み（旧: 6/1月曜固定）。`stats_providers.dart`/`stats_screen.dart`
 - `updateStatus` は `groupId` 引数を追加済み（Firestoreパス指定対応）
 - `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（アカウント昇格実装時に対応）
