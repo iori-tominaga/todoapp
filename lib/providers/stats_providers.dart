@@ -16,8 +16,7 @@ final statsProvider = Provider<GroupStats>((ref) {
   final groups = ref.watch(groupsProvider);
   final me = ref.watch(currentUserIdProvider);
 
-  final done = ref
-      .watch(tasksProvider)
+  final done = (ref.watch(tasksProvider).value ?? const <Task>[])
       .where((t) =>
           t.groupId == groupId &&
           t.status == TaskStatus.done &&

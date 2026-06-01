@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/auth_providers.dart';
 import '../features/auth/account_register_screen.dart';
 import '../features/auth/onboarding_screen.dart';
 import '../features/character/character_screen.dart';
@@ -15,9 +18,31 @@ import '../features/tasks/task_edit_screen.dart';
 import '../features/tasks/tasks_screen.dart';
 import 'scaffold_with_nav_bar.dart';
 
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/tasks',
-  routes: [
+/// 認証状態を見て遷移をガードする GoRouter。
+///
+/// 未ログインなら `/onboarding` に閉じ込め、サインインすると `/tasks` へ抜ける。
+/// 認証状態の変化（[isSignedInProvider]）を [ValueNotifier] 経由で
+/// `refreshListenable` に渡し、redirect を再評価させる。
+final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = ValueNotifier<bool>(false);
+  ref.listen<bool>(
+    isSignedInProvider,
+    (_, next) => refresh.value = next,
+    fireImmediately: true,
+  );
+  ref.onDispose(refresh.dispose);
+
+  return GoRouter(
+    initialLocation: '/tasks',
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final signedIn = ref.read(isSignedInProvider);
+      final onOnboarding = state.matchedLocation == '/onboarding';
+      if (!signedIn) return onOnboarding ? null : '/onboarding';
+      if (onOnboarding) return '/tasks';
+      return null;
+    },
+    routes: [
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
@@ -97,5 +122,6 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
-  ],
-);
+    ],
+  );
+});

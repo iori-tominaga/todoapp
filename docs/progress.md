@@ -1,7 +1,7 @@
 # 開発の進捗・再開ガイド（progress.md）
 
 > このファイルは「コンテキストをクリアした後にスムーズ再開する」ための単一の道しるべ。
-> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-05-30（Phase 3 完了時点）
+> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-01（Phase 4 完了時点）
 
 ---
 
@@ -29,44 +29,63 @@
 | Phase 1 | 全画面をモックデータで実装 | ✅ 完了 |
 | Phase 2 | Repository層 + Riverpod化（mock差し替え可能に） | ✅ 完了 |
 | Phase 3 | 統計を実データ算出に差し替え（タスク履歴から集計） | ✅ 完了 |
-| Phase 4 | Firebase接続（認証 + Firestore Repository実装） | ⏭ 次はここ |
+| Phase 4 | 非同期土台 + 匿名認証 + Firestoreスケルトン（設計と土台） | ✅ 完了 |
+| Phase 4-接続 | 実Firebase接続（手順書どおりProvider差し替え） | ⏭ オーナー操作待ち |
 | Phase 5 | 広告・課金 | 未着手 |
 
 ---
 
-## 2. Phase 3 でやったこと（直近の完了内容）
+## 2. Phase 4 でやったこと（直近の完了内容）
 
-- `stats_providers.dart` の `statsProvider` を、`MockData.familyStats` 直返しから
-  **`tasksProvider` + `currentGroupId` の完了タスク履歴を集計する実装**へ差し替え
-  - 期限内完了率（完了日 ≤ 期限日）/ 平均消化時間（作成→完了の日数, 小数1桁）
-  - 消化数ランキング（completedBy 別カウント・多い順）
-  - 消化スピードランキング（completedBy 別の平均日数・速い順）
-  - 直近7日(月〜日)推移（**2026-06-01 月曜 起点に固定**。画面ラベルに合わせている）
-  - 完了が0件のグループはゼロ値を返す安全分岐あり
-- `lib/mock/mock_data.dart` に `_done` ヘルパーと `_familyDone`（完了履歴14件）を追加。
-  各メンバーの傾向（消化数・スピード・期限内率）に差が出るよう日付/所要時間を調整
-- 不要になった `MockData.familyStats` と `group_stats` import を削除
-- `flutter analyze` クリーン、`flutter build web` 成功、`6-stats.png` で実データ表示を目視確認
-  （完了率80% / 平均1.2日 / 田中6・佐藤4・自分3・鈴木2 / 推移 2,2,1,1,1,1,2）
+「実Firebaseはまだ繋がない。Firestore対応の**非同期土台＋匿名認証の配線**を
+コードで完成させ、InMemory/Mock のまま動かす」方針（＝設計と土台）で実施。
 
-### 仕組み: チェックポイント機構（このフェーズで新設）
-コンテキスト枯渇でクオリティが落ちるのを防ぐため、キリ目でクリア→スムーズ再開できる仕組みを追加。
-- `.claude/commands/checkpoint.md` … 区切る前に progress.md を最新化して「クリアOK」を案内
-- `.claude/commands/resume.md` … クリア後の一発目。progress.md と git から状況を復元し次の一手を提示
+### 4a: Repository を同期 → 非同期化（Stream/Future）
+- `TaskRepository` を `Stream<List<Task>> watchAll()` ＋ `Future` 書き込みに変更。
+  InMemory実装は `StreamController.broadcast` で再emit（`watchAll` は最初に現在値を
+  即 yield → 以降 controller を流す。Firestore `snapshots()` がそのまま乗る形）
+- `GroupRepository` も `watchAll()` Stream化
+- `tasksProvider` を **`StreamNotifier`** 化（state は `AsyncValue<List<Task>>`）。
+  書き込み後の手動 `state=` は不要に（ストリーム再emitで自動更新）
+- **画面波及ゼロ**: 派生Provider（`currentGroupTasksProvider` 等）で
+  `.value ?? const []` に畳み、画面が触る公開Providerの**同期型を維持**。
+  `groupsProvider` も内部 `_groupsStreamProvider`(非公開) を同期Listに畳む
 
-### 設計のキモ（Phase 2 から継続）
-`TasksNotifier`（全タスク保持）→ 各派生Providerが watch の自動連鎖。
-統計も `tasksProvider` を watch しているので、タスクを完了するだけで各指標が再計算される。
+### 4b: 匿名認証の配線
+- `AuthRepository`（`authStateChanges()` Stream ＋ `signInAnonymously()`）と
+  `MockAuthRepository`（サインインで `'me'` を返し既存モックデータと整合）を追加
+- `currentUserIdProvider` を認証由来に（**同期 `String` 維持**、未ログインは空文字）
+- go_router を `routerProvider` 化＋**redirect 認証ガード**（未ログイン→`/onboarding`、
+  サインイン→`/tasks`）。`refreshListenable` で認証状態変化を再評価
+- onboarding「はじめる（匿名）」を本物の `signInAnonymously()` に配線
+- 実フロー目視確認済み（URL `/onboarding`→`/tasks` 遷移、サインイン後タスク表示）
+
+### 4c: Firestore実装スケルトン＋接続手順書
+- `lib/data/firestore_repositories.dart` に Firestore/FirebaseAuth 実装の器
+  （実コード例コメント＋`UnimplementedError`）。差し込み口を物理的に用意
+- `docs/specs/firebase-setup.md` に**実接続手順書**（役割分担📱/💻・データ構造・
+  セキュリティルール・Provider差し替え・残TODO）
+
+### 設計のキモ（Phase 4 で確立し全サブで一貫）
+**「内部Async源 → 派生で `.value ?? []` 同期畳み込み」**。
+この型を4aで作ったので、4bの認証も同じ型に流すだけで済んだ。
+画面コードは Phase 4 全体を通して**1行も変えていない**。
 
 ---
 
-## 3. 次の一手（Phase 4）
+## 3. 次の一手
 
-Firebase 接続。`InMemory*Repository` を Firestore 実装へ差し替える（境界は Repository の内側だけ）。
-- 認証（匿名 or Google）で `currentUserId` を実値化（現状は `MockData.currentUserId` 固定）
-- `task_repository.dart` / `group_repository.dart` の Firestore 版を実装し、同期APIを Stream/Future へ
-- 統計の7日推移は今「2026-06-01 起点固定」。実データ接続時に**今日起点の直近7日**へ作り替える
+土台は完成済み。選択肢は2つ:
+
+### A. 実Firebase接続（Phase 4-接続）
+`docs/specs/firebase-setup.md` の手順どおり進める。要オーナー操作（📱コンソール:
+プロジェクト作成・匿名認証有効化・Firestore作成・セキュリティルール）。
+Claude側は FlutterFire 設定・スケルトン実装・Provider差し替え（💻）。画面は無改修で切替。
 - `google-services.json` 等の秘密情報はコミットしない（.gitignore 済み）
+
+### B. Phase 5（広告・課金）へ進む
+実接続を後回しにし先に機能を積む。`_AdBanner`（tasks_screen）やグループ `isPremium` は
+既にUIにあるので、課金導線から着手できる。
 
 ---
 
@@ -104,8 +123,8 @@ npx -y kill-port 8080
 
 ## 5. 未解決メモ / TODO
 
-- キャラ体調の自動更新は**コード配線は正しいが実機タップでの目視確認は未**（静的スクショでは再現不可）
-- 統計の自動再計算（タスク完了→数字が動く）も同様にコード配線は正しいが実機タップ確認は未
-- 統計の7日推移は **2026-06-01 月曜 起点に固定**（モック期の暫定）。Phase 4 で今日起点へ
-- Phase 4 で Firebase 接続時、InMemory*Repository を Firestore実装へ差し替える
-- `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（Phase 4 認証で対応）
+- キャラ体調の自動更新・統計の自動再計算は**コード配線は正しいが実機タップ確認は未**（静的スクショでは再現不可）
+- 統計の7日推移は **2026-06-01 月曜 起点に固定**（モック期の暫定）。実接続時に今日起点へ（手順書のTODO参照）
+- 実接続時 `updateStatus` に `groupId` 引数が必要（Firestoreはパス指定）。`docs/specs/firebase-setup.md` 参照
+- `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（アカウント昇格実装時に対応）
+- アカウント昇格（匿名→Google/メール）は `account_register_screen.dart` がモックのまま
