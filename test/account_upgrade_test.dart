@@ -59,6 +59,41 @@ void main() {
     expect(uid, MockData.currentUserId, reason: 'ログインで以前のデータ（me）に戻れる');
   });
 
+  test('匿名サインインの初期表示名はモックの自分の名前になる', () async {
+    final auth = MockAuthRepository();
+    addTearDown(auth.dispose);
+
+    await auth.signInAnonymously();
+    final user = await auth.userChanges().first;
+
+    expect(user!.displayName, MockData.currentUserName);
+  });
+
+  test('updateDisplayName で表示名が更新され userChanges が流す', () async {
+    final auth = MockAuthRepository();
+    addTearDown(auth.dispose);
+
+    await auth.signInAnonymously();
+    await auth.updateDisplayName('いおり');
+    final user = await auth.userChanges().first;
+
+    expect(user!.displayName, 'いおり');
+    expect(user.uid, MockData.currentUserId, reason: '更新で uid は変わらない');
+  });
+
+  test('メール昇格しても表示名は保持される', () async {
+    final auth = MockAuthRepository();
+    addTearDown(auth.dispose);
+
+    await auth.signInAnonymously();
+    await auth.updateDisplayName('いおり');
+    await auth.linkEmail(email: 'family@example.com', password: 'secret123');
+    final user = await auth.userChanges().first;
+
+    expect(user!.displayName, 'いおり', reason: '昇格で名前が消えるとデータ引き継ぎが片手落ち');
+    expect(user.isAnonymous, isFalse);
+  });
+
   test('サインアウトで未ログイン（null）になる', () async {
     final auth = MockAuthRepository();
     addTearDown(auth.dispose);

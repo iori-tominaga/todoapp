@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../mock/mock_data.dart';
+import '../../providers/auth_providers.dart';
+import '../../providers/repositories.dart';
 import '../../theme/app_tokens.dart';
 
 /// プロフィール編集（表示名・アバター）。
 ///
-/// 自分（[MockData.currentUserId]）の表示名を編集して保存（モック）。
-class ProfileEditScreen extends StatefulWidget {
+/// 自分の表示名を編集し、FirebaseAuth の displayName（正本）へ保存する。
+class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
 
   @override
-  State<ProfileEditScreen> createState() => _ProfileEditScreenState();
+  ConsumerState<ProfileEditScreen> createState() => _ProfileEditScreenState();
 }
 
-class _ProfileEditScreenState extends State<ProfileEditScreen> {
+class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late final TextEditingController _controller =
-      TextEditingController(text: MockData.currentUserName);
+      TextEditingController(text: ref.read(currentDisplayNameProvider) ?? '');
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -24,11 +27,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.dispose();
   }
 
-  void _save() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('プロフィールを保存しました')));
-    context.pop();
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || _saving) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(authRepositoryProvider).updateDisplayName(name);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('プロフィールを保存しました')));
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('保存に失敗しました: $e')));
+    }
   }
 
   @override
@@ -90,14 +107,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           TextField(
             controller: _controller,
             onChanged: (_) => setState(() {}),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
             decoration: const InputDecoration(),
           ),
           SizedBox(height: t.spaceLg),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _save,
-              child: const Text('保存'),
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('保存'),
             ),
           ),
         ],

@@ -27,3 +27,8 @@ final isAnonymousProvider = Provider<bool>(
 final currentEmailProvider = Provider<String?>(
   (ref) => ref.watch(authUserProvider).value?.email,
 );
+
+/// 自分の表示名（未設定は null）。プロフィール編集・グループ参加の初期値に使う。
+final currentDisplayNameProvider = Provider<String?>(
+  (ref) => ref.watch(authUserProvider).value?.displayName,
+);

@@ -10,6 +10,12 @@ final currentUserIdProvider = Provider<String>(
   (ref) => ref.watch(authStateProvider).value ?? '',
 );
 
+/// 無料プランで所属できるグループ数の上限。
+///
+/// サーバ側（Firestoreルール）では「所属グループ数」を数えられないため、
+/// この上限はクライアント側でのみ強制する（[canCreateGroupProvider]）。
+const int kFreeGroupLimit = 3;
+
 /// 所属グループのストリーム源（非同期）。画面には直接見せない。
 final _groupsStreamProvider = StreamProvider<List<Group>>(
   (ref) => ref.watch(groupRepositoryProvider).watchAll(),
@@ -18,6 +24,11 @@ final _groupsStreamProvider = StreamProvider<List<Group>>(
 /// 所属グループ一覧（同期スナップショット・ロード前は空リスト）。
 final groupsProvider = Provider<List<Group>>(
   (ref) => ref.watch(_groupsStreamProvider).value ?? const <Group>[],
+);
+
+/// 新しいグループを作成できるか（無料上限の未達）。
+final canCreateGroupProvider = Provider<bool>(
+  (ref) => ref.watch(groupsProvider).length < kFreeGroupLimit,
 );
 
 /// 現在表示中のグループID。タスク一覧の切り替え対象。

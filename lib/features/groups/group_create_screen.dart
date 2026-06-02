@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/auth_providers.dart';
 import '../../providers/group_providers.dart';
 import '../../providers/repositories.dart';
 import '../../theme/app_tokens.dart';
@@ -19,7 +20,8 @@ class GroupCreateScreen extends ConsumerStatefulWidget {
 
 class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   final _nameController = TextEditingController();
-  final _displayNameController = TextEditingController();
+  late final _displayNameController =
+      TextEditingController(text: ref.read(currentDisplayNameProvider) ?? '');
   bool _submitting = false;
 
   @override
@@ -33,6 +35,13 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
     final name = _nameController.text.trim();
     final displayName = _displayNameController.text.trim();
     if (name.isEmpty || displayName.isEmpty || _submitting) return;
+    if (!ref.read(canCreateGroupProvider)) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text('無料プランは $kFreeGroupLimit グループまでです')));
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
@@ -57,6 +66,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final canCreate = ref.watch(canCreateGroupProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -66,6 +76,23 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
       body: ListView(
         padding: EdgeInsets.all(t.spaceMd),
         children: [
+          if (!canCreate) ...[
+            Container(
+              padding: EdgeInsets.all(t.spaceSm),
+              decoration: BoxDecoration(
+                color: t.priorityHigh.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(t.radiusSm),
+              ),
+              child: Text(
+                '無料プランは $kFreeGroupLimit グループまでです。\n新しく作るには既存のグループから退出してください。',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: t.priorityHigh),
+              ),
+            ),
+            SizedBox(height: t.spaceMd),
+          ],
           Text('グループ名', style: Theme.of(context).textTheme.labelMedium),
           SizedBox(height: t.spaceXs),
           TextField(
@@ -96,7 +123,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _submitting ? null : _create,
+              onPressed: (_submitting || !canCreate) ? null : _create,
               child: _submitting
                   ? const SizedBox(
                       width: 18,

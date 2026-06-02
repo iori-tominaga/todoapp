@@ -173,7 +173,12 @@ class FirebaseAuthRepository implements AuthRepository {
     return _auth.userChanges().map(
           (u) => u == null
               ? null
-              : AuthUser(uid: u.uid, isAnonymous: u.isAnonymous, email: u.email),
+              : AuthUser(
+                  uid: u.uid,
+                  isAnonymous: u.isAnonymous,
+                  email: u.email,
+                  displayName: u.displayName,
+                ),
         );
   }
 
@@ -205,6 +210,12 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signInWithGoogle() async {
     await _auth.signInWithPopup(GoogleAuthProvider());
+  }
+
+  @override
+  Future<void> updateDisplayName(String name) async {
+    // updateDisplayName は currentUser を更新し userChanges を再 emit する。
+    await _auth.currentUser!.updateDisplayName(name);
   }
 
   @override

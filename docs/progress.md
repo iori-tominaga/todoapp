@@ -164,7 +164,12 @@
   onboarding に「ログイン」導線、設定でアカウント状態を出し分け、ログアウトを実 signOut に修正。
   **⚠️ 実機稼働には📱Console でメール/パスワード＋Googleプロバイダの有効化が必要**
   （手順: `docs/specs/firebase-setup.md`「アカウント昇格を有効にする」）。有効化後に再デプロイ。
-- 残: 無料上限（3グループ/6人）のサーバ側強制、プロフィール実データ化、自己参加ルールの厳密化。
+- ✅ **プロフィール実データ化（作戦A）**（2026-06-02・コード/テスト/ビルド完了）。
+  表示名の正本を FirebaseAuth の `displayName` に統一。`AuthUser.displayName`＋`updateDisplayName()` 追加、
+  `currentDisplayNameProvider` 新設、`profile_edit_screen` を実保存化（Mock依存を撤去）、
+  グループ作成/参加の表示名欄を現在の表示名で初期値補完。
+  ※既存グループの members 配列は遡及更新しない（次に作る/参加するグループから新名が反映される設計）。
+- 残: 無料上限（3グループ/6人）のサーバ側強制、自己参加ルールの厳密化。
 
 ### A. Phase 6（広告・課金）へ（Bの後）
 `_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。
@@ -221,5 +226,5 @@ $FB deploy --only hosting        --project group-todo-d07c0   # → https://grou
   実行: `flutter test test/character_stats_reactive_test.dart`
 - 統計の7日推移は **今日起点**に修正済み（旧: 6/1月曜固定）。`stats_providers.dart`/`stats_screen.dart`
 - `updateStatus` は `groupId` 引数を追加済み（Firestoreパス指定対応）
-- `profile_edit_screen.dart` は意図的に `MockData.currentUserName` を使用中（アカウント昇格実装時に対応）
+- `profile_edit_screen.dart` は FirebaseAuth `displayName` を読み書き（作戦Aで実データ化済み）
 - アカウント昇格（匿名→Google/メール）は `account_register_screen.dart` がモックのまま

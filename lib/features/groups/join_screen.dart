@@ -23,7 +23,8 @@ class JoinScreen extends ConsumerStatefulWidget {
 }
 
 class _JoinScreenState extends ConsumerState<JoinScreen> {
-  final _displayNameController = TextEditingController();
+  late final _displayNameController =
+      TextEditingController(text: ref.read(currentDisplayNameProvider) ?? '');
   bool _submitting = false;
   String? _error;
 
