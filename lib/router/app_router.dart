@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_providers.dart';
 import '../features/auth/account_register_screen.dart';
+import '../features/auth/login_screen.dart';
 import '../features/auth/onboarding_screen.dart';
 import '../features/character/character_screen.dart';
 import '../features/groups/group_create_screen.dart';
@@ -37,12 +38,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/tasks',
     refreshListenable: refresh,
     redirect: (context, state) {
+      final loc = state.matchedLocation;
       // 招待リンクは未ログインでも通す（着地後に自前でサインインして参加する）。
-      if (state.matchedLocation == '/join') return null;
+      if (loc == '/join') return null;
       final signedIn = ref.read(isSignedInProvider);
-      final onOnboarding = state.matchedLocation == '/onboarding';
-      if (!signedIn) return onOnboarding ? null : '/onboarding';
-      if (onOnboarding) return '/tasks';
+      // 認証ゲート（オンボーディング／ログイン）は未ログインで滞在を許可する。
+      final atAuthGate = loc == '/onboarding' || loc == '/login';
+      if (!signedIn) return atAuthGate ? null : '/onboarding';
+      if (atAuthGate) return '/tasks';
       return null;
     },
     routes: [
@@ -78,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/account/register',
       builder: (context, state) => const AccountRegisterScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       path: '/legal',

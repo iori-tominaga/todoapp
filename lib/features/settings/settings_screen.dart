@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/auth_providers.dart';
 import '../../providers/group_providers.dart';
+import '../../providers/repositories.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/premium_card.dart';
@@ -22,14 +24,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _dueReminder = true;
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final anonymous = ref.read(isAnonymousProvider);
     final ok = await showConfirmDialog(
       context,
       title: 'ログアウト',
-      message: '匿名アカウントのままログアウトすると、データを復元できなくなる場合があります。ログアウトしますか？',
+      message: anonymous
+          ? '匿名アカウントのままログアウトすると、データを復元できなくなります。先にアカウント登録するのがおすすめです。ログアウトしますか？'
+          : 'ログアウトします。次回は同じアカウントでログインすればデータに戻れます。',
       confirmLabel: 'ログアウト',
       destructive: true,
     );
-    if (ok && context.mounted) context.go('/onboarding');
+    if (!ok) return;
+    await ref.read(authRepositoryProvider).signOut();
   }
 
   @override
@@ -52,12 +58,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () => context.push('/profile'),
                 ),
                 const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.verified_user_outlined),
-                  title: const Text('アカウント登録（匿名 → 正式）'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/account/register'),
-                ),
+                if (ref.watch(isAnonymousProvider))
+                  ListTile(
+                    leading: const Icon(Icons.verified_user_outlined),
+                    title: const Text('アカウント登録（匿名 → 正式）'),
+                    subtitle: const Text('機種変更してもデータを引き継げます'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/account/register'),
+                  )
+                else
+                  ListTile(
+                    leading: Icon(Icons.verified_user, color: t.statusDone),
+                    title: const Text('登録済み'),
+                    subtitle: Text(ref.watch(currentEmailProvider) ?? 'アカウント登録済み'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/account/register'),
+                  ),
               ],
             ),
           ),

@@ -56,8 +56,8 @@ class OnboardingScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => context.push('/account/register'),
-                  child: const Text('アカウント登録'),
+                  onPressed: () => context.push('/login'),
+                  child: const Text('ログイン（登録済みの方）'),
                 ),
               ),
               SizedBox(height: t.spaceXl),

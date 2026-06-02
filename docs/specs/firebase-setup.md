@@ -126,6 +126,39 @@ service cloud.firestore {
 
 ---
 
+## アカウント昇格（匿名→メール/Google）を有効にする 📱
+
+匿名アカウントを正式アカウントに「昇格」する機能（作戦B）を**実機で動かす**には、
+コンソールでプロバイダを有効化する必要がある。コードは実装・テスト済みなので、
+この有効化をするだけで動く。
+
+### 手順（すべて 📱 オーナー・スマホブラウザで可）
+
+1. コンソール → 「Authentication」→「Sign-in method（ログイン方法）」
+2. **「メール/パスワード」を有効化**して保存
+   - 「メールリンク（パスワードなしでログイン）」はオフのままでよい
+3. **「Google」を有効化**して保存
+   - 「プロジェクトの公開名」と「サポートメール」を聞かれたら入力（自分のGmailでOK）
+4. （Google用）「Authentication」→「Settings」→「承認済みドメイン」に
+   `group-todo-d07c0.web.app` と `localhost` が入っていることを確認
+   （通常は自動で入っている。無ければ追加）
+
+### 動作の仕組み（覚えておくと安心）
+
+- 昇格は `linkWithCredential` / `linkWithPopup` を使い、**uid を変えない**。
+  だから所属グループ（`memberIds`）もタスクもそのまま引き継がれる。
+- 別端末では同じメール/Googleで**ログイン**すると同じ uid に戻り、同じデータが見える。
+- Firestore のセキュリティルールは uid ベースなので、**ルール変更は不要**。
+
+### 注意
+
+- 「このメールは既に使われています」エラーは、別アカウントが同じメールを
+  持っているケース。その場合は昇格ではなく**ログイン**で入る（UIが案内する）。
+- Flutter Web ではスマホブラウザのポップアップブロックに注意。
+  ユーザー操作（ボタンタップ）直後に呼ぶ実装にしてある。
+
+---
+
 ## 実接続時にあわせて直すTODO
 
 - [x] **統計の7日推移を「今日起点」へ**: `stats_providers.dart` を
@@ -137,4 +170,7 @@ service cloud.firestore {
       タスク購読は `collectionGroup` をやめ所属グループのマージ（`watchForGroups`）に変更。
       Hosting 公開: https://group-todo-d07c0.web.app 。※対話フローは実機検証待ち。
 - [ ] `profile_edit_screen.dart` の `MockData.currentUserName` を認証プロフィールへ。
-- [ ] アカウント昇格（匿名→Google/メール）の実装（`account_register_screen.dart`）。
+- [x] **アカウント昇格（匿名→メール/Google）＋別端末ログイン実装済み**（作戦B）。
+      `AuthRepository` に link/signIn 系を追加、`account_register_screen` / `login_screen` を実装、
+      設定でアカウント状態を出し分け。**実機で動かすには上記「アカウント昇格を有効にする」📱の
+      プロバイダ有効化が必要**。

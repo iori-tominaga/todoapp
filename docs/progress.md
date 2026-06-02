@@ -158,9 +158,13 @@
 ### ✅ C. 動作検証（完了・2026-06-02）
 キャラ体調／統計の自動更新を `test/character_stats_reactive_test.dart` で検証済み（§5）。
 
-### ⏭ B. 仕上げ系TODOの消化（次はここ）
-下記「未解決メモ」の消化。候補: 無料上限（3グループ/6人）のサーバ側強制、
-アカウント昇格（匿名→Google/メール）、プロフィール実データ化、自己参加ルールの厳密化 など。
+### B. 仕上げ系TODOの消化（進行中）
+- ✅ **アカウント昇格（匿名→メール/Google）＋別端末ログイン**（2026-06-02・コード/テスト/ビルド完了）。
+  `AuthRepository` に link/signIn 系＋`userChanges()` 追加、`account_register_screen`/`login_screen` 実装、
+  onboarding に「ログイン」導線、設定でアカウント状態を出し分け、ログアウトを実 signOut に修正。
+  **⚠️ 実機稼働には📱Console でメール/パスワード＋Googleプロバイダの有効化が必要**
+  （手順: `docs/specs/firebase-setup.md`「アカウント昇格を有効にする」）。有効化後に再デプロイ。
+- 残: 無料上限（3グループ/6人）のサーバ側強制、プロフィール実データ化、自己参加ルールの厳密化。
 
 ### A. Phase 6（広告・課金）へ（Bの後）
 `_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。

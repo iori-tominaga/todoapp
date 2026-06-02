@@ -160,19 +160,55 @@ String _generateInviteCode() {
 }
 
 class FirebaseAuthRepository implements AuthRepository {
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+
   @override
   Stream<String?> authStateChanges() {
-    return FirebaseAuth.instance.authStateChanges().map((u) => u?.uid);
+    return _auth.authStateChanges().map((u) => u?.uid);
+  }
+
+  @override
+  Stream<AuthUser?> userChanges() {
+    // userChanges は link でメール/匿名フラグが変わったときも emit する。
+    return _auth.userChanges().map(
+          (u) => u == null
+              ? null
+              : AuthUser(uid: u.uid, isAnonymous: u.isAnonymous, email: u.email),
+        );
   }
 
   @override
   Future<String> signInAnonymously() async {
-    final cred = await FirebaseAuth.instance.signInAnonymously();
+    final cred = await _auth.signInAnonymously();
     return cred.user!.uid;
   }
 
   @override
-  Future<void> signOut() => FirebaseAuth.instance.signOut();
+  Future<void> linkEmail(
+      {required String email, required String password}) async {
+    final cred = EmailAuthProvider.credential(email: email, password: password);
+    await _auth.currentUser!.linkWithCredential(cred);
+  }
+
+  @override
+  Future<void> linkGoogle() async {
+    // Flutter Web: プロバイダ直渡しのポップアップで昇格（uid 不変）。
+    await _auth.currentUser!.linkWithPopup(GoogleAuthProvider());
+  }
+
+  @override
+  Future<void> signInWithEmail(
+      {required String email, required String password}) async {
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    await _auth.signInWithPopup(GoogleAuthProvider());
+  }
+
+  @override
+  Future<void> signOut() => _auth.signOut();
 }
 
 // === モデル変換 ===
