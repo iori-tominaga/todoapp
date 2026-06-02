@@ -234,4 +234,7 @@ $FB deploy --only hosting        --project group-todo-d07c0   # → https://grou
 - 統計の7日推移は **今日起点**に修正済み（旧: 6/1月曜固定）。`stats_providers.dart`/`stats_screen.dart`
 - `updateStatus` は `groupId` 引数を追加済み（Firestoreパス指定対応）
 - `profile_edit_screen.dart` は FirebaseAuth `displayName` を読み書き（作戦Aで実データ化済み）
-- アカウント昇格（匿名→Google/メール）は `account_register_screen.dart` がモックのまま
+- アカウント昇格（匿名→Google/メール）は **コード実装済み**。`account_register_screen.dart` は
+  `authRepositoryProvider.linkEmail()/linkGoogle()` を実呼び出し、`FirebaseAuthRepository` も
+  `linkWithCredential`/`signInWithEmailAndPassword` で本物。**残作業は📱Console でメール/Google
+  プロバイダを有効化すること**のみ（手順: `docs/specs/firebase-setup.md`「アカウント昇格を有効にする」）。
