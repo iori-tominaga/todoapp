@@ -158,7 +158,7 @@
 ### ✅ C. 動作検証（完了・2026-06-02）
 キャラ体調／統計の自動更新を `test/character_stats_reactive_test.dart` で検証済み（§5）。
 
-### B. 仕上げ系TODOの消化（進行中）
+### ✅ B. 仕上げ系TODOの消化（完了・2026-06-02）
 - ✅ **アカウント昇格（匿名→メール/Google）＋別端末ログイン**（2026-06-02・コード/テスト/ビルド完了）。
   `AuthRepository` に link/signIn 系＋`userChanges()` 追加、`account_register_screen`/`login_screen` 実装、
   onboarding に「ログイン」導線、設定でアカウント状態を出し分け、ログアウトを実 signOut に修正。
@@ -169,10 +169,17 @@
   `currentDisplayNameProvider` 新設、`profile_edit_screen` を実保存化（Mock依存を撤去）、
   グループ作成/参加の表示名欄を現在の表示名で初期値補完。
   ※既存グループの members 配列は遡及更新しない（次に作る/参加するグループから新名が反映される設計）。
-- 残: 無料上限（3グループ/6人）のサーバ側強制、自己参加ルールの厳密化。
+- ✅ **無料上限／自己参加ルール強化**（2026-06-02・ルールを本番デプロイ済み）。
+  - 6人/グループ上限を `firestore.rules` の create・自己参加でサーバ強制（`memberLimit` と突合）。
+  - `isSelfJoin()` で `members` 配列も「+1かつ既存hasAll」を検証 → 既存メンバー削除/改ざんを封じた。
+  - 3グループ上限は**クライアント側のみ**（`canCreateGroupProvider`／`kFreeGroupLimit`）。
+    理由: Firestoreルールは「所属グループ数」を数えられない（クエリ不可）ため。
+    将来サーバ強制したいなら users/{uid} カウンタ文書 か Cloud Functions が必要。
 
-### A. Phase 6（広告・課金）へ（Bの後）
+### ⏭ A. Phase 6（広告・課金）へ（次の一手）
 `_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。
+- 想定論点: 課金プラットフォーム（Google Play Billing / RevenueCat など）、`isPremium` を
+  どこで持つか（グループ単位 or ユーザー単位）、上限解放（memberLimit引き上げ・グループ数解放）の流れ。
 
 ---
 
