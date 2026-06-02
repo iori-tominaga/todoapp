@@ -2,17 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/character_providers.dart';
+import '../../providers/entitlement_providers.dart';
+import '../../providers/group_providers.dart';
+import '../../providers/repositories.dart';
 import '../../theme/app_tokens.dart';
 
 /// ⑦ キャラクター（体調・ステータス表示）。
 ///
-/// 仕様では遷移時に動画広告（無料のみ）を差し込むが、広告は Phase 5。
+/// 遷移時に動画広告を差し込む（プレミアム＝広告除去ユーザーには出さない・仕様§5）。
 /// 体調は全グループの未完了タスク総数から自動算出（[characterProvider]）。
-class CharacterScreen extends ConsumerWidget {
+class CharacterScreen extends ConsumerStatefulWidget {
   const CharacterScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CharacterScreen> createState() => _CharacterScreenState();
+}
+
+class _CharacterScreenState extends ConsumerState<CharacterScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 遷移直後（最初の描画後）に、非プレミアムなら動画広告を一度だけ出す。
+    // グループ未ロード（プレミアム状態が未確定）のうちは出さない。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(groupsProvider).isEmpty) return;
+      if (ref.read(userHasAnyPremiumProvider)) return;
+      ref.read(adServiceProvider).showInterstitial(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = context.tokens;
     final cs = Theme.of(context).colorScheme;
     final c = ref.watch(characterProvider);

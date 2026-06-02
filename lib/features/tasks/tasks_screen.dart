@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/group.dart';
 import '../../models/task.dart';
+import '../../providers/entitlement_providers.dart';
 import '../../providers/group_providers.dart';
 import '../../providers/task_providers.dart';
 import '../../theme/app_tokens.dart';
@@ -45,6 +46,7 @@ class TasksScreen extends ConsumerWidget {
     final tasks = ref.watch(currentGroupTasksProvider);
     final groups = ref.watch(groupsProvider);
     final me = ref.watch(currentUserIdProvider);
+    final isPremium = ref.watch(currentGroupIsPremiumProvider);
 
     if (groups.isEmpty) {
       return const _NoGroupsScreen();
@@ -113,7 +115,7 @@ class TasksScreen extends ConsumerWidget {
               },
             ),
           ),
-          if (!group.isPremium) const _AdBanner(),
+          if (!isPremium) const _AdBanner(),
         ],
       ),
     );

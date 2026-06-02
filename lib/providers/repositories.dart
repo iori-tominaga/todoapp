@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/ad_service.dart';
 import '../data/auth_repository.dart';
+import '../data/entitlement_repository.dart';
 import '../data/firestore_repositories.dart';
 import '../data/group_repository.dart';
 import '../data/task_repository.dart';
@@ -25,3 +27,18 @@ final groupRepositoryProvider = Provider<GroupRepository>((ref) {
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => FirebaseAuthRepository(),
 );
+
+/// 課金エンタイトルメント。Web では RevenueCat ネイティブ SDK が動かないため
+/// 作戦A では [MockEntitlementRepository] を使う（購入→プレミアム反映を Web で検証）。
+/// ネイティブビルドでは [RevenueCatEntitlementRepository] に差し替える。
+final entitlementRepositoryProvider = Provider<EntitlementRepository>(
+  (ref) {
+    final repo = MockEntitlementRepository();
+    ref.onDispose(repo.dispose);
+    return repo;
+  },
+);
+
+/// 広告サービス。Web では AdMob が動かないため作戦A では [MockAdService]
+/// （広告ダイアログ）を使う。ネイティブビルドでは [AdMobAdService] に差し替える。
+final adServiceProvider = Provider<AdService>((ref) => MockAdService());

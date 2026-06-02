@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/app_config.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/group_providers.dart';
 import '../../providers/repositories.dart';
@@ -36,10 +37,11 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
     final displayName = _displayNameController.text.trim();
     if (name.isEmpty || displayName.isEmpty || _submitting) return;
     if (!ref.read(canCreateGroupProvider)) {
+      final limit = ref.read(appConfigProvider).freeGroupLimit;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(
-            content: Text('無料プランは $kFreeGroupLimit グループまでです')));
+        ..showSnackBar(SnackBar(
+            content: Text('無料プランは $limit グループまでです')));
       return;
     }
 
@@ -67,6 +69,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final canCreate = ref.watch(canCreateGroupProvider);
+    final freeGroupLimit = ref.watch(appConfigProvider).freeGroupLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -84,7 +87,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                 borderRadius: BorderRadius.circular(t.radiusSm),
               ),
               child: Text(
-                '無料プランは $kFreeGroupLimit グループまでです。\n新しく作るには既存のグループから退出してください。',
+                '無料プランは $freeGroupLimit グループまでです。\n新しく作るには既存のグループから退出してください。',
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall

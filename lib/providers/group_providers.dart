@@ -2,19 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/group.dart';
 import '../models/member.dart';
+import 'app_config.dart';
 import 'auth_providers.dart';
+import 'entitlement_providers.dart';
 import 'repositories.dart';
 
 /// ログイン中ユーザーのID。認証状態から取得し、未ログイン時は空文字。
 final currentUserIdProvider = Provider<String>(
   (ref) => ref.watch(authStateProvider).value ?? '',
 );
-
-/// 無料プランで所属できるグループ数の上限。
-///
-/// サーバ側（Firestoreルール）では「所属グループ数」を数えられないため、
-/// この上限はクライアント側でのみ強制する（[canCreateGroupProvider]）。
-const int kFreeGroupLimit = 3;
 
 /// 所属グループのストリーム源（非同期）。画面には直接見せない。
 final _groupsStreamProvider = StreamProvider<List<Group>>(
@@ -26,10 +22,16 @@ final groupsProvider = Provider<List<Group>>(
   (ref) => ref.watch(_groupsStreamProvider).value ?? const <Group>[],
 );
 
-/// 新しいグループを作成できるか（無料上限の未達）。
-final canCreateGroupProvider = Provider<bool>(
-  (ref) => ref.watch(groupsProvider).length < kFreeGroupLimit,
-);
+/// 新しいグループを作成できるか。
+///
+/// プレミアム（いずれかの所属グループが有効）なら無制限。無料は
+/// [AppConfig.freeGroupLimit] 未満まで。サーバ側（Firestoreルール）では
+/// 「所属グループ数」を数えられないため、この上限はクライアント側でのみ強制する。
+final canCreateGroupProvider = Provider<bool>((ref) {
+  if (ref.watch(userHasAnyPremiumProvider)) return true;
+  final limit = ref.watch(appConfigProvider).freeGroupLimit;
+  return ref.watch(groupsProvider).length < limit;
+});
 
 /// 現在表示中のグループID。タスク一覧の切り替え対象。
 class CurrentGroupIdNotifier extends Notifier<String> {

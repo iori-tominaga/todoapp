@@ -1,7 +1,7 @@
 # 開発の進捗・再開ガイド（progress.md）
 
 > このファイルは「コンテキストをクリアした後にスムーズ再開する」ための単一の道しるべ。
-> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-02（Phase 5 実機検証OK・参加時タスク同期バグ修正済み）
+> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-02（Phase 6-A 完了・広告/課金の抽象化＋UIをMockで実装、全テスト緑）
 >
 > 🌐 公開URL: https://group-todo-d07c0.web.app （Firebase Hosting・最新ビルド配信済み）
 
@@ -34,7 +34,8 @@
 | Phase 4 | 非同期土台 + 匿名認証 + Firestoreスケルトン（設計と土台） | ✅ 完了 |
 | Phase 4-接続 | 実Firebase接続（Provider差し替え・実プロジェクト稼働） | ✅ 完了 |
 | Phase 5 | グループ作成＋招待リンク＋参加（実DBを使える状態に） | ✅ 実機検証OK |
-| Phase 6 | 広告・課金 | 未着手 |
+| Phase 6-A | 広告・課金の抽象化＋UI（Mockで Web 検証可能な範囲） | ✅ 完了（作戦A） |
+| Phase 6-B | 実SDK配線（AdMob＋RevenueCat＋Remote Config）＝ネイティブ | 未着手 |
 
 ---
 
@@ -151,9 +152,46 @@
 
 ---
 
+## 2.7. Phase 6-A でやったこと（広告・課金の抽象化＋UI・作戦A）
+
+「実SDKまでは踏み込まず、Phase 4 と同じ『抽象→Mockで動かす→SDKは差し込み口だけ』型で
+Web 検証可能な範囲を完遂」。理由: AdMob も RevenueCat ネイティブSDK も Flutter Web では
+動かず、今の検証パイプライン（build web→スクショ/verify_boot）が全部Web前提のため。
+
+### エンタイトルメント層（課金状態）
+- `lib/data/entitlement_repository.dart`：抽象 `EntitlementRepository`
+  （`watchPremiumGroupIds` Stream＋`purchasePremium`/`restorePurchases`）＋ `MockEntitlementRepository`
+  ＋ `RevenueCatEntitlementRepository`（UnimplementedErrorのスケルトン・実コード例コメント）
+- `lib/providers/entitlement_providers.dart`：Phase 4 の「内部Async源→`.value ??`同期畳み込み」型。
+  `effectiveIsPremiumProvider(groupId)`＝`group.isPremium`（Firestore正） OR 購入直後オーバーレイ。
+  `currentGroupIsPremiumProvider` / `userHasAnyPremiumProvider`（全グループ横断＝広告除去判定）
+- `repositories.dart`：`entitlementRepositoryProvider`＝Mock（Web）。ネイティブで RevenueCat に差し替え
+- `PremiumCard` を実購入に配線（ConsumerStatefulWidget化）。購入→プレミアム即時反映→広告が消える
+
+### 広告ゲート
+- `lib/data/ad_service.dart`：抽象 `AdService`（`showInterstitial`）＋ `MockAdService`
+  （広告ダイアログ＋3秒カウントダウン）＋ `AdMobAdService`（スケルトン）。`adServiceProvider`＝Mock
+- `tasks_screen`：バナーを `currentGroupIsPremiumProvider` 連動に（`group.isPremium`直読みをやめた）
+- `character_screen`：ConsumerStatefulWidget化。遷移時、**グループロード済みかつ非プレミアム**なら
+  Mockインタースティシャルを1回表示（状態未確定では出さない＝誤発火防止）
+
+### Remote Config 層
+- `lib/providers/app_config.dart`：`AppConfig`（freeGroupLimit/freeMemberLimit/statsHistoryDays/
+  interstitialEveryNVisits）＋ `appConfigProvider`（既定値）＋ Firebase Remote Config スケルトン
+- `kFreeGroupLimit` 定数を撤去し `appConfigProvider` 経由に。`canCreateGroupProvider` は
+  **プレミアムなら無制限**／無料は `freeGroupLimit` 未満（`group_create_screen` の文言も連動）
+
+### 検証
+- `flutter analyze` クリーン、`flutter build web` 成功、`verify_boot` でエラー0件
+- `test/entitlement_test.dart`（3件）＋全14件 PASS。購入→`effectiveIsPremium` 反映を決定的に検証
+- ⚠️ 実課金・実広告は**未配線**（Mock）。本番は Phase 6-B（ネイティブビルド）で `purchases_flutter` /
+  `google_mobile_ads` / `firebase_remote_config` を各 `*Service`/`*Repository` の差し込み口に実装する
+
+---
+
 ## 3. 次の一手
 
-進行順は **C →（今ここ）→ B → A** で合意済み。
+進行順は **C → B → A（Phase 6-A 完了・今ここ）→ Phase 6-B** で進行中。
 
 ### ✅ C. 動作検証（完了・2026-06-02）
 キャラ体調／統計の自動更新を `test/character_stats_reactive_test.dart` で検証済み（§5）。
@@ -176,10 +214,16 @@
     理由: Firestoreルールは「所属グループ数」を数えられない（クエリ不可）ため。
     将来サーバ強制したいなら users/{uid} カウンタ文書 か Cloud Functions が必要。
 
-### ⏭ A. Phase 6（広告・課金）へ（次の一手）
-`_AdBanner`（tasks_screen）やグループ `isPremium` は既にUIにあるので課金導線から着手できる。
-- 想定論点: 課金プラットフォーム（Google Play Billing / RevenueCat など）、`isPremium` を
-  どこで持つか（グループ単位 or ユーザー単位）、上限解放（memberLimit引き上げ・グループ数解放）の流れ。
+### ✅ A. Phase 6-A（広告・課金の抽象化＋UI・作戦A）（完了・本日）
+詳細は §2.7。Mockで「購入→プレミアム反映→広告除去」が Web 上で動き、テストも緑。
+
+### ⏭ Phase 6-B（実SDK配線＝ネイティブ）へ（次の一手）
+作戦Aで差し込み口は用意済み。本番化には**ネイティブ（iOS/Android）ビルド環境**が要る。
+- `purchases_flutter`（RevenueCat）を `RevenueCatEntitlementRepository` に実装
+  ＋ webhook→Cloud Function で `group.isPremium` を同期（クライアントを信用しない）
+- `google_mobile_ads`（AdMob）を `AdMobAdService` に実装＋バナー `BannerAd`/`AdWidget`
+- `firebase_remote_config` を `appConfigProvider` に実装（上限値・広告頻度の配信制御）
+- ⚠️ Web 検証パイプラインでは確認不能。ストア登録＋TestFlight/Play内部テストが必要
 
 ---
 
@@ -228,6 +272,10 @@ $FB deploy --only hosting        --project group-todo-d07c0   # → https://grou
 - **自己参加ルールの限界**: `members` 配列の中身（`isOwner` 等）はルールで検証していない。
   招待コード/groupIdが漏れなければ実害は低いが、厳密にやるなら map 内容の検証 or 招待ドキュメント側で制御
 - グループ作成・参加に**無料上限（3グループ/6人）のサーバ側強制は未実装**（UI表記のみ）。必要なら後で
+- Phase 6-A: 広告・課金は**Mock配線**（`MockEntitlementRepository`/`MockAdService`/`AppConfig`既定値）。
+  実SDK（RevenueCat/AdMob/Remote Config）は Phase 6-B（ネイティブビルド）で各差し込み口に実装する
+- Phase 6-A の目視確認は localhost だと認証ガード＋本番グループ依存で難しいため、ロジックは
+  `test/entitlement_test.dart` で決定的に検証した。実機での広告/購入UXは Phase 6-B 以降に📱で確認
 - ✅ キャラ体調の自動更新・統計の自動再計算は **Widgetテストで検証済み**（2026-06-02）。
   `test/character_stats_reactive_test.dart`：InMemory/Mockで完了→体調が再描画・統計が再集計されることを確認。
   実行: `flutter test test/character_stats_reactive_test.dart`
