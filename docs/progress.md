@@ -1,7 +1,7 @@
 # 開発の進捗・再開ガイド（progress.md）
 
 > このファイルは「コンテキストをクリアした後にスムーズ再開する」ための単一の道しるべ。
-> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-02（Phase 6-A 完了・広告/課金の抽象化＋UIをMockで実装、全テスト緑）
+> 作業のキリが良いタイミングで必ず更新する。最終更新: 2026-06-02（Phase 6-A 完了＋デプロイ済み・Phase 6-B 手順書を整備＝ネイティブ実装はコピペ可能な状態に）
 >
 > 🌐 公開URL: https://group-todo-d07c0.web.app （Firebase Hosting・最新ビルド配信済み）
 
@@ -35,7 +35,7 @@
 | Phase 4-接続 | 実Firebase接続（Provider差し替え・実プロジェクト稼働） | ✅ 完了 |
 | Phase 5 | グループ作成＋招待リンク＋参加（実DBを使える状態に） | ✅ 実機検証OK |
 | Phase 6-A | 広告・課金の抽象化＋UI（Mockで Web 検証可能な範囲） | ✅ 完了（作戦A） |
-| Phase 6-B | 実SDK配線（AdMob＋RevenueCat＋Remote Config）＝ネイティブ | 未着手 |
+| Phase 6-B | 実SDK配線（AdMob＋RevenueCat＋Remote Config）＝ネイティブ | 📝 手順書完成・実機配線待ち |
 
 ---
 
@@ -217,13 +217,17 @@ Web 検証可能な範囲を完遂」。理由: AdMob も RevenueCat ネイテ�
 ### ✅ A. Phase 6-A（広告・課金の抽象化＋UI・作戦A）（完了・本日）
 詳細は §2.7。Mockで「購入→プレミアム反映→広告除去」が Web 上で動き、テストも緑。
 
-### ⏭ Phase 6-B（実SDK配線＝ネイティブ）へ（次の一手）
-作戦Aで差し込み口は用意済み。本番化には**ネイティブ（iOS/Android）ビルド環境**が要る。
+### 📝 Phase 6-B（実SDK配線＝ネイティブ）= 手順書完成・実機配線待ち（次の一手）
+作戦Aで差し込み口は用意済み。**「コード先行＋手順書」方式**で、実装コード一式を
+`docs/specs/phase6b-native-setup.md` に書き切った。ネイティブビルド環境が整い次第、
+手順書のコードをコピペ＋ダッシュボード設定＋実機検証で完成する。
 - `purchases_flutter`（RevenueCat）を `RevenueCatEntitlementRepository` に実装
   ＋ webhook→Cloud Function で `group.isPremium` を同期（クライアントを信用しない）
 - `google_mobile_ads`（AdMob）を `AdMobAdService` に実装＋バナー `BannerAd`/`AdWidget`
 - `firebase_remote_config` を `appConfigProvider` に実装（上限値・広告頻度の配信制御）
-- ⚠️ Web 検証パイプラインでは確認不能。ストア登録＋TestFlight/Play内部テストが必要
+- ⚠️ **Web 検証パイプラインでは確認不能**（これら2プラグインは Web 実装なし。本体に import すると
+  `flutter build web` が壊れるため、本体は Mock のまま温存＝差し替えは実機ビルド時に手順書で実施）。
+  ストア登録＋TestFlight/Play内部テスト、Cloud Function は Blaze プラン切替が前提
 
 ---
 
@@ -274,6 +278,10 @@ $FB deploy --only hosting        --project group-todo-d07c0   # → https://grou
 - グループ作成・参加に**無料上限（3グループ/6人）のサーバ側強制は未実装**（UI表記のみ）。必要なら後で
 - Phase 6-A: 広告・課金は**Mock配線**（`MockEntitlementRepository`/`MockAdService`/`AppConfig`既定値）。
   実SDK（RevenueCat/AdMob/Remote Config）は Phase 6-B（ネイティブビルド）で各差し込み口に実装する
+- Phase 6-B: **手順書 `docs/specs/phase6b-native-setup.md` 完成済み**（依存追加・ネイティブ実装コード・
+  プラットフォーム設定・Cloud Function webhook・テスト広告ID・差し替え手順・検証チェックリスト）。
+  ⚠️ `google_mobile_ads`/`purchases_flutter` は Web 実装が無いため本体には未追加（追加すると build web が壊れる）。
+  実機/エミュレータ環境を用意したら手順書通りに配線→検証する。Cloud Function は Blaze プランが必要
 - Phase 6-A の目視確認は localhost だと認証ガード＋本番グループ依存で難しいため、ロジックは
   `test/entitlement_test.dart` で決定的に検証した。実機での広告/購入UXは Phase 6-B 以降に📱で確認
 - ✅ キャラ体調の自動更新・統計の自動再計算は **Widgetテストで検証済み**（2026-06-02）。
